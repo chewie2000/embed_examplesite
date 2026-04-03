@@ -6,7 +6,7 @@ import { createSession } from '@/lib/session';
 const DEMO_USERS = [
   {
     email: 'mark.oldfield@sigmacomputing.com',
-    password: 'demo123',
+    password: '3145n!',
     name: 'Mark Oldfield',
   },
 ];

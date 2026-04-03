@@ -116,15 +116,6 @@ export default function LoginPage() {
           </form>
         </div>
 
-        {/* Demo credentials */}
-        <div className="mt-4 border border-white/[0.06] rounded-xl p-4 bg-white/[0.02]">
-          <p className="text-xs font-medium text-zinc-500 mb-2 uppercase tracking-wider">Demo credentials</p>
-          <div className="font-mono text-xs text-zinc-400 space-y-1">
-            <p>mark.oldfield@sigmacomputing.com</p>
-            <p>demo123</p>
-          </div>
-        </div>
-
         <p className="text-center text-xs text-zinc-600 mt-6">
           <Link href="/" className="hover:text-zinc-400 transition-colors">
             ← Back to home
