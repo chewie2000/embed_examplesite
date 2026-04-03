@@ -14,6 +14,28 @@
   ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.14); }
 }
 
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px) scale(1); }
+  50% { transform: translateY(-30px) scale(1.05); }
+}
+@keyframes float-medium {
+  0%, 100% { transform: translateY(0px) translateX(0px); }
+  33% { transform: translateY(-20px) translateX(15px); }
+  66% { transform: translateY(10px) translateX(-10px); }
+}
+@keyframes float-fast {
+  0%, 100% { transform: translateY(0px) translateX(0px) scale(1); }
+  50% { transform: translateY(-15px) translateX(-20px) scale(0.95); }
+}
+@keyframes pulse-slow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(99,102,241,0.3); }
+  50% { box-shadow: 0 0 0 12px rgba(99,102,241,0); }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 @layer utilities {
   .gradient-text {
     background: linear-gradient(135deg, #fff 0%, #c7d2fe 40%, #818cf8 100%);
@@ -30,6 +52,17 @@
 
   .glow-accent {
     box-shadow: 0 0 0 1px rgba(99,102,241,0.3), 0 0 30px rgba(99,102,241,0.12);
+  }
+
+  .animate-float-slow { animation: float-slow 8s ease-in-out infinite; }
+  .animate-float-medium { animation: float-medium 11s ease-in-out infinite; }
+  .animate-float-fast { animation: float-fast 6s ease-in-out infinite; }
+  .animate-pulse-slow { animation: pulse-slow 3s ease-in-out infinite; }
+  .animate-fade-up { animation: fade-up 0.6s ease both; }
+
+  .login-dots {
+    background-image: radial-gradient(circle, rgba(255,255,255,0.12) 1px, transparent 1px);
+    background-size: 28px 28px;
   }
 
   .grid-bg {
