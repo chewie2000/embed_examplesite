@@ -5,18 +5,9 @@ import { createSession } from '@/lib/session';
 // Passwords here are plaintext for demo purposes only.
 const DEMO_USERS = [
   {
-    email: 'admin@prismanalytics.com',
+    email: 'mark.oldfield@sigmacomputing.com',
     password: 'demo123',
-    name: 'Alex Morgan',
-    accountType: 'admin',
-    teams: ['Admin'],
-  },
-  {
-    email: 'viewer@prismanalytics.com',
-    password: 'demo123',
-    name: 'Jordan Lee',
-    accountType: 'viewer',
-    teams: ['Viewers'],
+    name: 'Mark Oldfield',
   },
 ];
 
