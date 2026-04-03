@@ -4,7 +4,7 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata = {
-  title: 'Prism Analytics',
+  title: 'Embed Success',
   description: 'Embedded analytics that feel native to your product.',
 };
 

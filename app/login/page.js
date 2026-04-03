@@ -117,9 +117,9 @@ export default function LoginPage() {
           <div className="mb-10">
             <Link href="/" className="inline-flex items-center gap-2.5 group mb-8">
               <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/30 group-hover:scale-105 transition-transform">
-                <span className="text-white text-sm font-bold">P</span>
+                <span className="text-white text-sm font-bold">E</span>
               </div>
-              <span className="text-base font-semibold text-white">Prism Analytics</span>
+              <span className="text-base font-semibold text-white">Embed Success</span>
             </Link>
             <h1 className="text-2xl font-bold text-white mt-6 mb-1.5 tracking-tight">Welcome back</h1>
             <p className="text-sm text-zinc-500">Sign in to access your analytics dashboard</p>

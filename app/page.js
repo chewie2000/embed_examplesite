@@ -175,7 +175,7 @@ export default function HomePage() {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
               <span className="text-white text-xs font-bold tracking-tight">P</span>
             </div>
-            <span className="text-sm font-semibold text-white">Prism Analytics</span>
+            <span className="text-sm font-semibold text-white">Embed Success</span>
           </div>
           <nav className="hidden md:flex items-center gap-7 text-sm text-zinc-400">
             <a href="#features" className="hover:text-white transition-colors">Features</a>
@@ -208,7 +208,7 @@ export default function HomePage() {
               <span className="text-white">that feel native.</span>
             </h1>
             <p className="text-lg text-zinc-400 mb-10 leading-relaxed max-w-lg">
-              Prism Analytics brings Sigma&apos;s powerful data exploration directly into your workflow — secure, fast, and built for your team.
+              Embed Success brings Sigma&apos;s powerful data exploration directly into your workflow — secure, fast, and built for your team.
             </p>
             <div className="flex items-center gap-3 flex-wrap mb-10">
               <Link
@@ -384,7 +384,7 @@ export default function HomePage() {
 
       {/* ── Footer ── */}
       <footer className="py-8 px-6 border-t border-white/[0.06] text-center text-xs text-zinc-600">
-        © {new Date().getFullYear()} Prism Analytics · Built with{' '}
+        © {new Date().getFullYear()} Embed Success · Built with{' '}
         <span className="text-indigo-400">Sigma Computing</span>
       </footer>
 
