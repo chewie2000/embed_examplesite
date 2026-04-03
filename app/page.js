@@ -2,32 +2,56 @@ import Link from 'next/link';
 
 const features = [
   {
-    icon: '⚡',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+      </svg>
+    ),
     title: 'Real-time Analytics',
-    desc: 'Live data connections mean your dashboards are always up to date — no manual refreshes required.',
+    desc: 'Live data connections mean your dashboards are always current — no manual refreshes.',
   },
   {
-    icon: '🔒',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+      </svg>
+    ),
     title: 'Secure by Default',
     desc: 'JWT-signed embed URLs ensure every user only sees the data they are authorized to access.',
   },
   {
-    icon: '🎨',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+      </svg>
+    ),
     title: 'Fully Customizable',
     desc: 'Match your brand with custom themes, layouts, and responsive design out of the box.',
   },
   {
-    icon: '👥',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    ),
     title: 'Team Workspaces',
     desc: 'Organize content by team with granular access controls and role-based permissions.',
   },
   {
-    icon: '📊',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+    ),
     title: 'Rich Visualizations',
-    desc: 'Charts, tables, pivot grids, and more — Sigma\'s full visualization library, embedded.',
+    desc: "Charts, tables, pivot grids, and more — Sigma's full visualization library, embedded.",
   },
   {
-    icon: '🔗',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+      </svg>
+    ),
     title: 'Deep Integrations',
     desc: 'Connect to Snowflake, BigQuery, Redshift, and more with a single configuration.',
   },
@@ -36,7 +60,7 @@ const features = [
 const steps = [
   {
     title: 'Sign in with your account',
-    desc: 'Log in to Prism Analytics using your company credentials. Your role and teams determine what data you can access.',
+    desc: 'Log in using your company credentials. Your role and teams determine what data you can access.',
   },
   {
     title: 'Your session is authenticated',
@@ -50,28 +74,27 @@ const steps = [
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#09090b]">
 
-      {/* ── Header ── */}
-      <header className="border-b border-gray-100 sticky top-0 bg-white z-10">
+      {/* ── Nav ── */}
+      <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#09090b]/80 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-              <span className="text-white text-xs font-bold">P</span>
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+              <span className="text-white text-xs font-bold tracking-tight">P</span>
             </div>
-            <span className="text-xl font-bold text-gray-900">Prism Analytics</span>
+            <span className="text-sm font-semibold text-white">Prism Analytics</span>
           </div>
 
-          <nav className="hidden md:flex items-center gap-8 text-sm text-gray-500">
-            <a href="#features" className="hover:text-gray-900 transition">Features</a>
-            <a href="#how-it-works" className="hover:text-gray-900 transition">How it works</a>
-            <a href="#" className="hover:text-gray-900 transition">Pricing</a>
-            <a href="#" className="hover:text-gray-900 transition">Docs</a>
+          <nav className="hidden md:flex items-center gap-7 text-sm text-zinc-400">
+            <a href="#features" className="hover:text-white transition-colors">Features</a>
+            <a href="#how-it-works" className="hover:text-white transition-colors">How it works</a>
+            <a href="#" className="hover:text-white transition-colors">Docs</a>
           </nav>
 
           <Link
             href="/login"
-            className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition"
+            className="text-sm font-medium bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg transition-colors shadow-lg shadow-indigo-500/20"
           >
             Sign In
           </Link>
@@ -79,30 +102,43 @@ export default function HomePage() {
       </header>
 
       {/* ── Hero ── */}
-      <section className="py-28 px-6 text-center bg-gradient-to-b from-indigo-50 to-white">
-        <div className="max-w-4xl mx-auto">
-          <span className="inline-block bg-indigo-100 text-indigo-700 text-xs font-semibold px-3 py-1 rounded-full mb-6 tracking-wide uppercase">
+      <section className="relative overflow-hidden grid-bg pt-32 pb-36 px-6">
+        {/* Glow orbs */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="w-[700px] h-[400px] bg-indigo-600/10 rounded-full blur-[120px]" />
+        </div>
+        <div className="absolute top-20 left-1/4 w-64 h-64 bg-violet-600/8 rounded-full blur-[80px] pointer-events-none" />
+
+        <div className="relative max-w-4xl mx-auto text-center">
+          <div className="inline-flex items-center gap-2 border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 text-xs font-medium px-3 py-1.5 rounded-full mb-8">
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
             Powered by Sigma Computing
-          </span>
-          <h1 className="text-5xl font-bold text-gray-900 leading-tight mb-6">
-            Embedded analytics that{' '}
-            <span className="text-indigo-600">feel native</span>{' '}
-            to your product
+          </div>
+
+          <h1 className="text-5xl sm:text-6xl font-bold leading-[1.1] tracking-tight mb-6">
+            <span className="gradient-text">Embedded analytics</span>
+            <br />
+            <span className="text-white">that feel native.</span>
           </h1>
-          <p className="text-xl text-gray-500 mb-10 max-w-2xl mx-auto leading-relaxed">
+
+          <p className="text-lg text-zinc-400 mb-10 max-w-2xl mx-auto leading-relaxed">
             Prism Analytics brings Sigma&apos;s powerful data exploration directly into your
             workflow — secure, fast, and built for your team.
           </p>
-          <div className="flex items-center justify-center gap-4 flex-wrap">
+
+          <div className="flex items-center justify-center gap-3 flex-wrap">
             <Link
               href="/login"
-              className="bg-indigo-600 text-white px-7 py-3 rounded-lg font-medium hover:bg-indigo-700 transition shadow-sm"
+              className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-lg font-medium text-sm transition-colors shadow-xl shadow-indigo-500/25"
             >
               Get Started
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
             </Link>
             <a
               href="#how-it-works"
-              className="text-gray-600 px-7 py-3 rounded-lg font-medium border border-gray-200 hover:bg-gray-50 transition"
+              className="inline-flex items-center gap-2 text-zinc-300 hover:text-white border border-white/10 hover:border-white/20 px-6 py-3 rounded-lg font-medium text-sm transition-all"
             >
               See How It Works
             </a>
@@ -111,41 +147,39 @@ export default function HomePage() {
       </section>
 
       {/* ── Stats ── */}
-      <section className="py-16 border-y border-gray-100">
-        <div className="max-w-4xl mx-auto px-6 grid grid-cols-3 gap-8 text-center">
+      <section className="border-y border-white/[0.06] py-14">
+        <div className="max-w-3xl mx-auto px-6 grid grid-cols-3 gap-8 text-center">
           {[
             { value: '10x', label: 'Faster time to insight' },
             { value: '99.9%', label: 'Uptime SLA' },
             { value: '<200ms', label: 'Avg. embed load time' },
           ].map((stat) => (
             <div key={stat.label}>
-              <div className="text-4xl font-bold text-indigo-600">{stat.value}</div>
-              <div className="text-gray-400 mt-1 text-sm">{stat.label}</div>
+              <div className="text-3xl font-bold gradient-text">{stat.value}</div>
+              <div className="text-zinc-500 mt-1.5 text-sm">{stat.label}</div>
             </div>
           ))}
         </div>
       </section>
 
       {/* ── Features ── */}
-      <section id="features" className="py-24 px-6">
+      <section id="features" className="py-28 px-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-3">Everything you need, built in</h2>
-            <p className="text-gray-400 max-w-xl mx-auto">
-              One platform. Every analytics capability your team requires.
-            </p>
+            <h2 className="text-3xl font-bold text-white mb-3 tracking-tight">Everything you need, built in</h2>
+            <p className="text-zinc-500 max-w-md mx-auto text-sm">One platform. Every analytics capability your team requires.</p>
           </div>
-          <div className="grid md:grid-cols-3 gap-6">
-            {features.map((f) => (
+          <div className="grid md:grid-cols-3 gap-px bg-white/[0.05] rounded-2xl overflow-hidden border border-white/[0.05]">
+            {features.map((f, i) => (
               <div
                 key={f.title}
-                className="p-6 rounded-xl border border-gray-100 hover:border-indigo-100 hover:shadow-sm transition group"
+                className="bg-[#09090b] p-7 hover:bg-white/[0.02] transition-colors group"
               >
-                <div className="w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center mb-4 text-xl group-hover:bg-indigo-100 transition">
+                <div className="w-9 h-9 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-4 group-hover:bg-indigo-500/15 transition-colors">
                   {f.icon}
                 </div>
-                <h3 className="font-semibold text-gray-900 mb-2">{f.title}</h3>
-                <p className="text-gray-400 text-sm leading-relaxed">{f.desc}</p>
+                <h3 className="font-semibold text-white mb-2 text-sm">{f.title}</h3>
+                <p className="text-zinc-500 text-sm leading-relaxed">{f.desc}</p>
               </div>
             ))}
           </div>
@@ -153,50 +187,61 @@ export default function HomePage() {
       </section>
 
       {/* ── How it works ── */}
-      <section id="how-it-works" className="py-24 px-6 bg-gray-50">
-        <div className="max-w-3xl mx-auto">
+      <section id="how-it-works" className="py-28 px-6 border-t border-white/[0.06]">
+        <div className="max-w-2xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-3">How it works</h2>
-            <p className="text-gray-400">Three steps from login to live analytics.</p>
+            <h2 className="text-3xl font-bold text-white mb-3 tracking-tight">How it works</h2>
+            <p className="text-zinc-500 text-sm">Three steps from login to live analytics.</p>
           </div>
-          <div className="space-y-10">
-            {steps.map((step, i) => (
-              <div key={step.title} className="flex gap-6 items-start">
-                <div className="w-10 h-10 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-sm">
-                  {i + 1}
+          <div className="relative">
+            <div className="absolute left-4 top-6 bottom-6 w-px bg-gradient-to-b from-indigo-500/50 via-violet-500/30 to-transparent" />
+            <div className="space-y-10">
+              {steps.map((step, i) => (
+                <div key={step.title} className="flex gap-6 items-start pl-2">
+                  <div className="w-8 h-8 rounded-full bg-indigo-600 border border-indigo-500/50 flex items-center justify-center text-xs font-bold text-white shrink-0 shadow-lg shadow-indigo-500/25 relative z-10">
+                    {i + 1}
+                  </div>
+                  <div className="pt-0.5">
+                    <h3 className="font-semibold text-white mb-1.5 text-sm">{step.title}</h3>
+                    <p className="text-zinc-500 text-sm leading-relaxed">{step.desc}</p>
+                  </div>
                 </div>
-                <div className="pt-1">
-                  <h3 className="font-semibold text-gray-900 mb-1">{step.title}</h3>
-                  <p className="text-gray-400 text-sm leading-relaxed">{step.desc}</p>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ── CTA banner ── */}
-      <section className="py-24 px-6 bg-indigo-600 text-center">
-        <div className="max-w-2xl mx-auto">
-          <h2 className="text-3xl font-bold text-white mb-4">
-            Ready to see your data come alive?
-          </h2>
-          <p className="text-indigo-200 mb-8">
-            Sign in to access your embedded analytics dashboard.
-          </p>
-          <Link
-            href="/login"
-            className="bg-white text-indigo-600 px-8 py-3 rounded-lg font-semibold hover:bg-indigo-50 transition shadow-sm"
-          >
-            Sign In Now
-          </Link>
+      {/* ── CTA ── */}
+      <section className="py-28 px-6 border-t border-white/[0.06]">
+        <div className="relative max-w-2xl mx-auto text-center">
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="w-96 h-40 bg-indigo-600/15 rounded-full blur-[60px]" />
+          </div>
+          <div className="relative glass rounded-2xl px-10 py-14 glow-accent">
+            <h2 className="text-3xl font-bold text-white mb-3 tracking-tight">
+              Ready to see your data come alive?
+            </h2>
+            <p className="text-zinc-400 mb-8 text-sm">
+              Sign in to access your embedded analytics dashboard.
+            </p>
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-7 py-3 rounded-lg font-medium text-sm transition-colors shadow-xl shadow-indigo-500/25"
+            >
+              Sign In Now
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+            </Link>
+          </div>
         </div>
       </section>
 
       {/* ── Footer ── */}
-      <footer className="py-8 px-6 border-t border-gray-100 text-center text-sm text-gray-400">
+      <footer className="py-8 px-6 border-t border-white/[0.06] text-center text-xs text-zinc-600">
         © {new Date().getFullYear()} Prism Analytics · Built with{' '}
-        <span className="text-indigo-500 font-medium">Sigma Computing</span>
+        <span className="text-indigo-400">Sigma Computing</span>
       </footer>
 
     </div>
