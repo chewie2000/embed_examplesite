@@ -40,7 +40,7 @@ export default function DashboardShell({ user }) {
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 group mr-2">
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-md shadow-indigo-500/20">
-            <span className="text-white text-[10px] font-bold">🎯</span>
+            <span className="text-white text-base font-bold">🎯</span>
           </div>
           <span className="text-sm font-semibold text-white hidden sm:block">Embed Success</span>
         </Link>

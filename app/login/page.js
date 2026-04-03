@@ -117,7 +117,7 @@ export default function LoginPage() {
           <div className="mb-10">
             <Link href="/" className="inline-flex items-center gap-2.5 group mb-8">
               <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/30 group-hover:scale-105 transition-transform">
-                <span className="text-white text-sm font-bold">🎯</span>
+                <span className="text-white text-xl font-bold">🎯</span>
               </div>
               <span className="text-base font-semibold text-white">Embed Success</span>
             </Link>

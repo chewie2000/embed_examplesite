@@ -173,7 +173,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
-              <span className="text-white text-xs font-bold tracking-tight">🎯</span>
+              <span className="text-white text-lg font-bold tracking-tight">🎯</span>
             </div>
             <span className="text-sm font-semibold text-white">Embed Success</span>
           </div>
