@@ -1,3 +1,5 @@
+import { auth } from '@clerk/nextjs/server';
+import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -164,7 +166,9 @@ function MiniDashboard() {
   );
 }
 
-export default function HomePage() {
+export default async function HomePage() {
+  const { userId } = await auth();
+  if (userId) redirect('/dashboard');
   return (
     <div className="min-h-screen bg-[#09090b]">
 

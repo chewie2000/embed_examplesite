@@ -1,36 +1,15 @@
-import { cookies } from 'next/headers';
+import { currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
-import { verifySession } from '@/lib/session';
 import DashboardShell from '@/components/DashboardShell';
 
-/**
- * Dashboard page — server component.
- *
- * Reads and verifies the session cookie server-side, then passes
- * the decoded user to the client DashboardShell.
- *
- * Middleware (middleware.js) already blocks unauthenticated requests,
- * so this is a belt-and-suspenders check.
- */
 export default async function DashboardPage() {
-  const cookieStore = cookies();
-  const token = cookieStore.get('session')?.value;
+  const user = await currentUser();
+  if (!user) redirect('/sign-in');
 
-  if (!token) redirect('/login');
+  const email = user.emailAddresses[0]?.emailAddress;
+  const name = user.firstName
+    ? `${user.firstName} ${user.lastName ?? ''}`.trim()
+    : email;
 
-  let session;
-  try {
-    session = await verifySession(token);
-  } catch {
-    redirect('/login');
-  }
-
-  const user = {
-    email: session.email,
-    name: session.name,
-    accountType: session.accountType,
-    teams: session.teams,
-  };
-
-  return <DashboardShell user={user} />;
+  return <DashboardShell user={{ email, name }} />;
 }

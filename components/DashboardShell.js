@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useClerk } from '@clerk/nextjs';
 import Link from 'next/link';
 import SigmaEmbed from './SigmaEmbed';
 
@@ -21,12 +21,10 @@ const NAV_ITEMS = [
 
 export default function DashboardShell({ user }) {
   const [activeMode, setActiveMode] = useState('');
-  const router = useRouter();
+  const { signOut } = useClerk();
 
   async function handleLogout() {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    router.push('/login');
-    router.refresh();
+    await signOut({ redirectUrl: '/' });
   }
 
   const activeItem = NAV_ITEMS.find((i) => i.mode === activeMode) ?? NAV_ITEMS[0];

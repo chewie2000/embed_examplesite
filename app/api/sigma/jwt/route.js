@@ -1,40 +1,37 @@
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
-import { verifySession } from '@/lib/session';
 import { generateSigmaEmbedUrl } from '@/lib/sigma-embed';
 
 /**
  * GET /api/sigma/jwt?mode=<optional_mode>
  *
- * Verifies the user's session cookie, then generates a signed Sigma embed URL.
- * The mode param allows different Sigma workbooks per section of the app
- * (e.g. ?mode=dashboard maps to DASHBOARD_SIGMA_BASE_URL in .env.local).
+ * Verifies the Clerk session, maps the user's login email to their Sigma
+ * identity via SIGMA_EMAIL_MAP, then generates a signed Sigma embed URL.
  *
- * Returns: { embedUrl: string, jwt: string }
+ * SIGMA_EMAIL_MAP is a JSON object in your environment variables:
+ *   { "user@gmail.com": "user@company.com" }
+ *
+ * If no mapping exists the login email is used as-is for the sub claim.
  */
 export async function GET(request) {
-  // 1. Verify session
-  const sessionToken = request.cookies.get('session')?.value;
-  if (!sessionToken) {
+  const { userId } = await auth();
+  if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  let session;
-  try {
-    session = await verifySession(sessionToken);
-  } catch {
-    return NextResponse.json({ error: 'Invalid or expired session.' }, { status: 401 });
-  }
+  const user = await currentUser();
+  const loginEmail = user.emailAddresses[0]?.emailAddress;
 
-  // 2. Read optional mode from query string
+  // Map login email → Sigma sub claim email
+  const emailMap = JSON.parse(process.env.SIGMA_EMAIL_MAP || '{}');
+  const sigmaEmail = emailMap[loginEmail] || loginEmail;
+
   const { searchParams } = new URL(request.url);
   const mode = searchParams.get('mode') || '';
 
-  // 3. Generate the signed Sigma embed URL
   try {
     const { embedUrl, jwt } = await generateSigmaEmbedUrl({
-      email: session.sigmaEmail || session.email,
-      accountType: session.accountType,
-      teams: session.teams,
+      email: sigmaEmail,
       mode,
     });
 
