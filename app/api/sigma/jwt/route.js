@@ -32,7 +32,7 @@ export async function GET(request) {
   // 3. Generate the signed Sigma embed URL
   try {
     const { embedUrl, jwt } = await generateSigmaEmbedUrl({
-      email: session.email,
+      email: session.sigmaEmail || session.email,
       accountType: session.accountType,
       teams: session.teams,
       mode,
