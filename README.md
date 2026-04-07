@@ -1,4 +1,4 @@
-# Prism Analytics — Sigma Embed Example Site
+# Embed Success — Sigma Embed Example Site
 
 A production-ready example of embedding [Sigma Computing](https://sigmacomputing.com) analytics into a modern SaaS application. Built with Next.js 14, Tailwind CSS, and JWT-based secure embedding.
 
@@ -120,7 +120,48 @@ npm run dev
 # → http://localhost:3000
 ```
 
-Demo login credentials are in `app/api/auth/login/route.js`. In production, replace these with your real identity provider.
+Demo login credentials are configured via environment variables (`DEMO_USER_EMAIL`, `DEMO_USER_PASSWORD`). In production, replace the demo auth with a real identity provider — see [Authentication options](#authentication-options) below.
+
+---
+
+## Authentication options
+
+The Sigma embedding architecture is auth-agnostic — the JWT route only needs an email to place in the `sub` claim, regardless of how the user authenticated. This makes it straightforward to swap or upgrade the auth layer.
+
+### Option 1 — Clerk (recommended for most cases)
+
+[Clerk](https://clerk.com) is the fastest path to multi-user auth in Next.js. The free tier supports up to 50,000 monthly retained users.
+
+- Pre-built login/signup UI
+- Each user's email maps directly to the Sigma `sub` claim
+- Custom `sigmaEmail` can be stored in Clerk user metadata for row-level security
+- Okta and Entra (Azure AD) SSO available as enterprise connections — no code changes required, configured in the Clerk dashboard
+
+**JWT route change (simplified):**
+```js
+import { auth, clerkClient } from '@clerk/nextjs/server';
+
+const { userId } = auth();
+const user = await clerkClient.users.getUser(userId);
+const sigmaEmail = user.publicMetadata.sigmaEmail || user.emailAddresses[0].emailAddress;
+```
+
+### Option 2 — NextAuth.js (Okta / Entra directly)
+
+For a standalone clone without Clerk, [NextAuth.js](https://next-auth.js.org) has built-in providers for both:
+
+```js
+import OktaProvider from 'next-auth/providers/okta';
+import AzureADProvider from 'next-auth/providers/azure-ad';
+
+// In [...nextauth]/route.js:
+providers: [
+  OktaProvider({ clientId, clientSecret, issuer }),
+  AzureADProvider({ clientId, clientSecret, tenantId }),
+]
+```
+
+The Sigma JWT side of the codebase (`lib/sigma-embed.js`, `/api/sigma/jwt`) requires **no changes** in either case — it simply reads an email from the session.
 
 ---
 
