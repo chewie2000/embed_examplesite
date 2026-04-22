@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { UserButton } from '@clerk/nextjs';
 import Link from 'next/link';
-import Image from 'next/image';
 import SigmaEmbed from './SigmaEmbed';
 
 const NAV_ITEMS = [
@@ -59,19 +58,6 @@ export default function DashboardShell({ user }) {
             <span className="text-xs font-medium text-zinc-300">{user.name}</span>
             <span className="text-[10px] text-zinc-600">{user.email}</span>
           </div>
-          {user.imageUrl ? (
-            <Image
-              src={user.imageUrl}
-              alt={user.name}
-              width={28}
-              height={28}
-              className="rounded-full shrink-0"
-            />
-          ) : (
-            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
-              {user.name?.[0] ?? '?'}
-            </div>
-          )}
           <UserButton afterSignOutUrl="/" />
         </div>
       </header>
