@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useClerk } from '@clerk/nextjs';
+import { UserButton } from '@clerk/nextjs';
 import Link from 'next/link';
+import Image from 'next/image';
 import SigmaEmbed from './SigmaEmbed';
 
 const NAV_ITEMS = [
@@ -21,11 +22,6 @@ const NAV_ITEMS = [
 
 export default function DashboardShell({ user }) {
   const [activeMode, setActiveMode] = useState('');
-  const { signOut } = useClerk();
-
-  async function handleLogout() {
-    await signOut({ redirectUrl: '/' });
-  }
 
   const activeItem = NAV_ITEMS.find((i) => i.mode === activeMode) ?? NAV_ITEMS[0];
 
@@ -63,15 +59,20 @@ export default function DashboardShell({ user }) {
             <span className="text-xs font-medium text-zinc-300">{user.name}</span>
             <span className="text-[10px] text-zinc-600">{user.email}</span>
           </div>
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
-            {user.name?.[0] ?? '?'}
-          </div>
-          <button
-            onClick={handleLogout}
-            className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors border border-white/[0.06] hover:border-white/[0.12] px-3 py-1.5 rounded-lg"
-          >
-            Sign out
-          </button>
+          {user.imageUrl ? (
+            <Image
+              src={user.imageUrl}
+              alt={user.name}
+              width={28}
+              height={28}
+              className="rounded-full shrink-0"
+            />
+          ) : (
+            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
+              {user.name?.[0] ?? '?'}
+            </div>
+          )}
+          <UserButton afterSignOutUrl="/" />
         </div>
       </header>
 

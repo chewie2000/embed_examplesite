@@ -2,17 +2,6 @@
 
 import { useState, useEffect } from 'react';
 
-/**
- * SigmaEmbed
- *
- * Fetches a signed embed URL from /api/sigma/jwt then renders
- * the Sigma iframe. Handles loading, error, and unconfigured states.
- *
- * @param {{ mode?: string }} props
- *   mode — optional mode string passed to /api/sigma/jwt?mode=<mode>
- *          Maps to a mode-prefixed SIGMA_BASE_URL in .env.local
- *          (e.g. mode="dashboard" → DASHBOARD_SIGMA_BASE_URL)
- */
 export default function SigmaEmbed({ mode = '' }) {
   const [embedUrl, setEmbedUrl] = useState(null);
   const [error, setError] = useState(null);
@@ -24,7 +13,6 @@ export default function SigmaEmbed({ mode = '' }) {
         const params = mode ? `?mode=${encodeURIComponent(mode)}` : '';
         const res = await fetch(`/api/sigma/jwt${params}`);
         const data = await res.json();
-
         if (!res.ok) throw new Error(data.error || 'Failed to generate embed URL.');
         setEmbedUrl(data.embedUrl);
       } catch (err) {
@@ -33,16 +21,33 @@ export default function SigmaEmbed({ mode = '' }) {
         setLoading(false);
       }
     }
-
     fetchEmbedUrl();
   }, [mode]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-gray-400">Loading Sigma embed…</p>
+      <div className="w-full h-full p-6 space-y-4">
+        {/* Toolbar skeleton */}
+        <div className="flex items-center gap-3">
+          <div className="h-7 w-32 rounded-md bg-white/[0.04] animate-pulse" />
+          <div className="h-7 w-20 rounded-md bg-white/[0.04] animate-pulse" />
+          <div className="flex-1" />
+          <div className="h-7 w-24 rounded-md bg-white/[0.04] animate-pulse" />
+        </div>
+        {/* Stat cards skeleton */}
+        <div className="grid grid-cols-3 gap-3">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-20 rounded-xl bg-white/[0.04] animate-pulse" />
+          ))}
+        </div>
+        {/* Chart skeleton */}
+        <div className="h-48 rounded-xl bg-white/[0.04] animate-pulse" />
+        {/* Table skeleton */}
+        <div className="space-y-2">
+          <div className="h-8 rounded-lg bg-white/[0.04] animate-pulse" />
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-10 rounded-lg bg-white/[0.03] animate-pulse" style={{ opacity: 1 - i * 0.15 }} />
+          ))}
         </div>
       </div>
     );
@@ -51,17 +56,17 @@ export default function SigmaEmbed({ mode = '' }) {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4 p-8 text-center">
-        <div className="w-14 h-14 rounded-full bg-amber-50 border border-amber-100 flex items-center justify-center text-2xl">
-          ⚠️
+        <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+          <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+          </svg>
         </div>
         <div>
-          <p className="font-semibold text-gray-800 mb-1">Sigma embed not configured</p>
-          <p className="text-sm text-gray-400 max-w-sm leading-relaxed">
-            {error}
-          </p>
+          <p className="font-semibold text-zinc-200 mb-1">Sigma embed not configured</p>
+          <p className="text-sm text-zinc-500 max-w-sm leading-relaxed">{error}</p>
         </div>
-        <div className="bg-gray-50 rounded-lg border border-gray-100 p-4 text-left text-xs font-mono text-gray-500 max-w-sm w-full space-y-1">
-          <p className="font-sans font-semibold text-gray-600 mb-2 not-italic">Required in .env.local</p>
+        <div className="bg-white/[0.03] rounded-xl border border-white/[0.06] p-4 text-left text-xs font-mono text-zinc-500 max-w-sm w-full space-y-1">
+          <p className="font-sans font-medium text-zinc-400 mb-2">Required in .env.local</p>
           <p>SIGMA_CLIENT_ID=your_client_id</p>
           <p>SIGMA_SECRET=your_secret</p>
           <p>SIGMA_BASE_URL=https://app.sigmacomputing.com/...</p>

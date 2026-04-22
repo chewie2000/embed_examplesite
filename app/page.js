@@ -187,7 +187,7 @@ export default async function HomePage() {
             <a href="#" className="hover:text-white transition-colors">Docs</a>
           </nav>
           <Link
-            href="/login"
+            href="/sign-in"
             className="text-sm font-medium bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg transition-colors shadow-lg shadow-indigo-500/20"
           >
             Sign In
@@ -216,7 +216,7 @@ export default async function HomePage() {
             </p>
             <div className="flex items-center gap-3 flex-wrap mb-10">
               <Link
-                href="/login"
+                href="/sign-in"
                 className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-lg font-medium text-sm transition-colors shadow-xl shadow-indigo-500/25"
               >
                 Get Started
@@ -374,7 +374,7 @@ export default async function HomePage() {
               Sign in to access your embedded analytics dashboard.
             </p>
             <Link
-              href="/login"
+              href="/sign-in"
               className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-7 py-3 rounded-lg font-medium text-sm transition-colors shadow-xl shadow-indigo-500/25"
             >
               Sign In Now

@@ -11,5 +11,5 @@ export default async function DashboardPage() {
     ? `${user.firstName} ${user.lastName ?? ''}`.trim()
     : email;
 
-  return <DashboardShell user={{ email, name }} />;
+  return <DashboardShell user={{ email, name, imageUrl: user.imageUrl }} />;
 }
