@@ -5,13 +5,14 @@ import { generateSigmaEmbedUrl } from '@/lib/sigma-embed';
 /**
  * GET /api/sigma/jwt?mode=<optional_mode>
  *
- * Verifies the Clerk session, maps the user's login email to their Sigma
- * identity via SIGMA_EMAIL_MAP, then generates a signed Sigma embed URL.
+ * Reads the authenticated user's Clerk publicMetadata to build the Sigma JWT claims.
+ * Set metadata per user in the Clerk dashboard → Users → [user] → Metadata → Public.
  *
- * SIGMA_EMAIL_MAP is a JSON object in your environment variables:
- *   { "user@gmail.com": "user@company.com" }
- *
- * If no mapping exists the login email is used as-is for the sub claim.
+ * Supported metadata fields:
+ *   sigmaEmail     — email used as the Sigma JWT sub claim (defaults to login email)
+ *   accountType    — Sigma account type: 'viewer' | 'creator' | 'admin'
+ *   teams          — array of Sigma team names e.g. ["sales", "emea"]
+ *   userAttributes — object passed to Sigma for RLS e.g. { "region": "EMEA" }
  */
 export async function GET(request) {
   const { userId } = await auth();
@@ -21,10 +22,12 @@ export async function GET(request) {
 
   const user = await currentUser();
   const loginEmail = user.emailAddresses[0]?.emailAddress;
+  const meta = user.publicMetadata ?? {};
 
-  // Map login email → Sigma sub claim email
-  const emailMap = JSON.parse(process.env.SIGMA_EMAIL_MAP || '{}');
-  const sigmaEmail = emailMap[loginEmail] || loginEmail;
+  const sigmaEmail = meta.sigmaEmail || loginEmail;
+  const accountType = meta.accountType;
+  const teams = meta.teams ?? [];
+  const userAttributes = meta.userAttributes ?? {};
 
   const { searchParams } = new URL(request.url);
   const mode = searchParams.get('mode') || '';
@@ -32,6 +35,9 @@ export async function GET(request) {
   try {
     const { embedUrl, jwt } = await generateSigmaEmbedUrl({
       email: sigmaEmail,
+      accountType,
+      teams,
+      userAttributes,
       mode,
     });
 
