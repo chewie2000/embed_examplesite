@@ -287,7 +287,7 @@ const FLOW_STEPS = [
   { color: 'indigo',  label: 'Request signed embed URL',   endpoint: 'GET /api/sigma/jwt',         detail: 'One request per embed on the page. Session cookie sent automatically.' },
   { color: 'violet',  label: 'Verify Clerk session',       endpoint: 'auth() — Clerk SDK',         detail: 'Confirms the user is authenticated, resolves userId' },
   { color: 'violet',  label: 'Read user profile',          endpoint: 'currentUser() — Clerk SDK',  detail: 'Fetches publicMetadata: sigmaEmail, accountType, teams, userAttributes' },
-  { color: 'indigo',  label: 'Sign the JWT',               endpoint: 'jose — HS256 / SIGMA_SECRET',detail: 'Payload: sub, iss, jti, iat, exp + optional claims. Secret never leaves server.' },
+  { color: 'indigo',  label: 'Sign the JWT locally',        endpoint: 'jose — HS256 / SIGMA_SECRET',detail: 'No API call to Sigma. The JWT is signed on your server using HMAC-SHA256 (HS256) with SIGMA_SECRET as the key. Sigma verifies using the same shared secret — your key never leaves your server.' },
   { color: 'indigo',  label: 'Return embed URL',           endpoint: '{ embedUrl, jwt }',          detail: 'embedUrl contains :jwt= param. Browser sets this as the iframe src. Repeated per embed on the page.' },
   { color: 'emerald', label: 'iframe loads embed URL',     endpoint: 'app.sigmacomputing.com',     detail: 'Sigma verifies the JWT signature using SIGMA_CLIENT_ID + SIGMA_SECRET. Applies RLS from user_attributes.' },
 ];
