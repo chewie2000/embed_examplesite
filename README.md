@@ -165,6 +165,55 @@ The Sigma JWT side of the codebase (`lib/sigma-embed.js`, `/api/sigma/jwt`) requ
 
 ---
 
+## Moving SIGMA_SECRET to an app server (production recommendation)
+
+In this demo `SIGMA_SECRET` lives in Vercel environment variables — acceptable for a demo, but in production the secret should live on a dedicated signing service, not on the web tier.
+
+### Why
+
+- The web tier (Vercel/Next.js) is publicly reachable. An app server can be locked to internal network only.
+- Secret rotation happens in one place without touching your web deployment.
+- Multiple front-ends (web, mobile, other products) can share a single signing service.
+- The app server can enforce additional business rules (rate limiting, workbook access control) before signing.
+
+### Target architecture
+
+```
+Browser
+  │
+  └── GET /api/sigma/jwt
+        │
+        └── Next.js server (verifies Clerk session)
+              │
+              └── POST https://your-app-server/embed/sign   ← SIGMA_SECRET lives here
+                    │
+                    └── Returns signed embedUrl → iframe renders Sigma content
+```
+
+### What changes in the code
+
+Only `lib/sigma-embed.js` needs to change — replace the local `jose` signing with a fetch to your signing service:
+
+```js
+// Current: signs locally
+const token = await new SignJWT(payload).sign(encodedSecret);
+
+// Production: delegates to app server
+const res = await fetch('https://your-app-server/embed/sign', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${process.env.SIGNING_SERVICE_TOKEN}`,
+  },
+  body: JSON.stringify({ email, accountType, teams, userAttributes, baseUrl }),
+});
+const { embedUrl } = await res.json();
+```
+
+Everything else — Clerk auth, the JWT route, the dashboard, RLS via `user_attributes` — is unchanged. The `SIGNING_SERVICE_TOKEN` is a simple shared secret between your Next.js server and the signing service, replacing `SIGMA_SECRET` on the web tier.
+
+---
+
 ## Deployment
 
 This repo is connected to Vercel. Every push to `master` triggers an automatic production deployment.
