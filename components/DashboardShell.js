@@ -58,8 +58,8 @@ export default function DashboardShell({ user }) {
   const activeItem = NAV_ITEMS[activeIndex] ?? NAV_ITEMS[0];
   const isMultiEmbed = activeItem.embeds.length > 1;
 
-  const handleJwt = useCallback((mode, jwt) => {
-    setJwts((prev) => ({ ...prev, [mode]: jwt }));
+  const handleJwt = useCallback((mode, jwt, embedUrl) => {
+    setJwts((prev) => ({ ...prev, [mode]: { jwt, embedUrl } }));
   }, []);
 
   const handleNavChange = (index) => {
@@ -106,6 +106,7 @@ export default function DashboardShell({ user }) {
               {Object.keys(jwts).length}
             </span>
           )}
+
         </button>
 
         <div className="flex items-center gap-3">

@@ -19,7 +19,7 @@ export default function SigmaEmbed({ mode = '', label, onJwt }) {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to generate embed URL.');
         setEmbedUrl(data.embedUrl);
-        if (onJwt && data.jwt) onJwt(mode, data.jwt);
+        if (onJwt && data.jwt) onJwt(mode, data.jwt, data.embedUrl);
       } catch (err) {
         setError(err.message);
       } finally {

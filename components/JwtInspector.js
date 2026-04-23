@@ -160,9 +160,23 @@ function FlowDiagram({ embedCount }) {
   );
 }
 
+function maskEmbedUrl(embedUrl) {
+  try {
+    const url = new URL(embedUrl);
+    const parts = url.pathname.split('/');
+    // pathname: /org/workbook/WorkbookName-id
+    const org = parts[1] ?? '…';
+    return `${url.origin}/${org}/workbook/***`;
+  } catch {
+    return '***';
+  }
+}
+
 function ClaimsPanel({ jwts, embeds }) {
   const [activeEmbed, setActiveEmbed] = useState(embeds[0]?.mode ?? '');
-  const jwt = jwts[activeEmbed];
+  const entry = jwts[activeEmbed];
+  const jwt = entry?.jwt;
+  const embedUrl = entry?.embedUrl;
   const claims = jwt ? decodeJwt(jwt) : null;
   const isMulti = embeds.length > 1;
 
@@ -195,6 +209,25 @@ function ClaimsPanel({ jwts, embeds }) {
               Signed server-side with SIGMA_SECRET using HS256. Never stored in the browser — Sigma verifies the signature on every embed load.
             </p>
           </div>
+
+          {/* Endpoints */}
+          <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-3 mb-4 space-y-2.5">
+            <p className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider">Endpoints</p>
+            <div>
+              <p className="text-[10px] text-zinc-500 mb-1">Token issued by</p>
+              <code className="text-[11px] font-mono text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 px-2 py-1 rounded block">
+                GET /api/sigma/jwt{activeEmbed ? `?mode=${activeEmbed}` : ''}
+              </code>
+            </div>
+            {embedUrl && (
+              <div>
+                <p className="text-[10px] text-zinc-500 mb-1">Sigma embed endpoint</p>
+                <code className="text-[11px] font-mono text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded block break-all">
+                  {maskEmbedUrl(embedUrl)}
+                </code>
+              </div>
+            )}
+          </div>
           {Object.entries(claims).map(([key, value]) => (
             <div key={key}>
               <ClaimRow label={key} value={value} />
@@ -217,7 +250,7 @@ export default function JwtInspector({ jwts, embeds, open, onClose }) {
   const [tab, setTab] = useState('flow');
   if (!open) return null;
 
-  const activeEmbedJwt = Object.values(jwts)[0];
+  const activeEmbedJwt = Object.values(jwts)[0]?.jwt;
 
   return (
     <>
