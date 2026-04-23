@@ -164,9 +164,15 @@ function maskEmbedUrl(embedUrl) {
   try {
     const url = new URL(embedUrl);
     const parts = url.pathname.split('/');
-    // pathname: /org/workbook/WorkbookName-id
     const org = parts[1] ?? '…';
-    return `${url.origin}/${org}/workbook/***`;
+    // Show the REST endpoint pattern with params visible but slug + JWT masked
+    const params = new URLSearchParams(url.search);
+    const visibleParams = [];
+    for (const [key] of params.entries()) {
+      if (key === ':jwt') visibleParams.push(`${key}=***`);
+      else visibleParams.push(`${key}=${params.get(key)}`);
+    }
+    return `${url.origin}/${org}/workbook/***?${visibleParams.join('&')}`;
   } catch {
     return '***';
   }
