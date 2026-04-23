@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 
-export default function SigmaEmbed({ mode = '' }) {
+export default function SigmaEmbed({ mode = '', onJwt }) {
   const [embedUrl, setEmbedUrl] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -15,6 +15,7 @@ export default function SigmaEmbed({ mode = '' }) {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to generate embed URL.');
         setEmbedUrl(data.embedUrl);
+        if (onJwt && data.jwt) onJwt(data.jwt);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -27,22 +28,18 @@ export default function SigmaEmbed({ mode = '' }) {
   if (loading) {
     return (
       <div className="w-full h-full p-6 space-y-4">
-        {/* Toolbar skeleton */}
         <div className="flex items-center gap-3">
           <div className="h-7 w-32 rounded-md bg-white/[0.04] animate-pulse" />
           <div className="h-7 w-20 rounded-md bg-white/[0.04] animate-pulse" />
           <div className="flex-1" />
           <div className="h-7 w-24 rounded-md bg-white/[0.04] animate-pulse" />
         </div>
-        {/* Stat cards skeleton */}
         <div className="grid grid-cols-3 gap-3">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="h-20 rounded-xl bg-white/[0.04] animate-pulse" />
           ))}
         </div>
-        {/* Chart skeleton */}
         <div className="h-48 rounded-xl bg-white/[0.04] animate-pulse" />
-        {/* Table skeleton */}
         <div className="space-y-2">
           <div className="h-8 rounded-lg bg-white/[0.04] animate-pulse" />
           {[...Array(4)].map((_, i) => (

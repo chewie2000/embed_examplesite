@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { UserButton } from '@clerk/nextjs';
 import Link from 'next/link';
 import SigmaEmbed from './SigmaEmbed';
+import JwtInspector from './JwtInspector';
 
 const NAV_ITEMS = [
   {
@@ -21,6 +22,8 @@ const NAV_ITEMS = [
 
 export default function DashboardShell({ user }) {
   const [activeMode, setActiveMode] = useState('');
+  const [jwt, setJwt] = useState(null);
+  const [inspectorOpen, setInspectorOpen] = useState(false);
 
   const activeItem = NAV_ITEMS.find((i) => i.mode === activeMode) ?? NAV_ITEMS[0];
 
@@ -51,6 +54,18 @@ export default function DashboardShell({ user }) {
         </div>
 
         <div className="flex-1" />
+
+        {/* JWT inspector toggle */}
+        <button
+          onClick={() => setInspectorOpen(true)}
+          title="View JWT claims"
+          className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-indigo-300 border border-white/[0.06] hover:border-indigo-500/30 hover:bg-indigo-500/[0.06] px-3 py-1.5 rounded-lg transition-all"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+          </svg>
+          JWT Claims
+        </button>
 
         {/* User */}
         <div className="flex items-center gap-3">
@@ -112,11 +127,14 @@ export default function DashboardShell({ user }) {
 
           {/* Embed container */}
           <div className="flex-1 rounded-xl border border-white/[0.06] overflow-hidden bg-[#0d0d10] min-h-0">
-            <SigmaEmbed mode={activeMode} />
+            <SigmaEmbed mode={activeMode} onJwt={setJwt} />
           </div>
 
         </main>
       </div>
+
+      {/* JWT Inspector panel */}
+      <JwtInspector jwt={jwt} open={inspectorOpen} onClose={() => setInspectorOpen(false)} />
     </div>
   );
 }
