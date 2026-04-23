@@ -12,19 +12,21 @@ function decodeJwt(token) {
   }
 }
 
-function maskEmbedUrl(embedUrl) {
+function parseMaskedEmbed(embedUrl) {
   try {
     const url = new URL(embedUrl);
-    const parts = url.pathname.split('/');
-    const org = parts[1] ?? '…';
+    const org = url.pathname.split('/')[1] ?? '…';
     const params = new URLSearchParams(url.search);
-    const visibleParams = [];
+    const lines = [];
     for (const [key] of params.entries()) {
-      visibleParams.push(key === ':jwt' ? `${key}=***` : `${key}=${params.get(key)}`);
+      lines.push(`  ${key}=${key === ':jwt' ? '***' : params.get(key)}`);
     }
-    return `${url.origin}/${org}/workbook/***?${visibleParams.join('&')}`;
+    return {
+      base: `GET ${url.origin}/${org}/workbook/***`,
+      params: lines,
+    };
   } catch {
-    return '***';
+    return { base: 'GET ***', params: [] };
   }
 }
 
@@ -210,14 +212,20 @@ function ClaimsPanel({ jwts, embeds }) {
                 GET /api/sigma/jwt{activeEmbed ? `?mode=${activeEmbed}` : ''}
               </code>
             </div>
-            {embedUrl && (
-              <div>
-                <p className="text-[10px] text-zinc-500 mb-1">Sigma embed endpoint</p>
-                <code className="text-[11px] font-mono text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded block break-all">
-                  {maskEmbedUrl(embedUrl)}
-                </code>
-              </div>
-            )}
+            {embedUrl && (() => {
+              const { base, params } = parseMaskedEmbed(embedUrl);
+              return (
+                <div>
+                  <p className="text-[10px] text-zinc-500 mb-1">Sigma embed API call</p>
+                  <div className="text-[11px] font-mono text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-2 py-2 rounded break-all leading-relaxed">
+                    <span className="text-emerald-400 font-semibold">{base}</span>
+                    {params.map((p, i) => (
+                      <div key={i} className="text-emerald-600 pl-2">{i === 0 ? '?' : '&'}{p.trim()}</div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Claims */}
