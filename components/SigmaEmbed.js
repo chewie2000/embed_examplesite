@@ -2,15 +2,27 @@
 
 import { useState, useEffect } from 'react';
 
-export default function SigmaEmbed({ mode = '', label, onJwt }) {
-  const [embedUrl, setEmbedUrl] = useState(null);
+export default function SigmaEmbed({ mode = '', label, onJwt, initialEmbedUrl, initialJwt }) {
+  const [embedUrl, setEmbedUrl] = useState(initialEmbedUrl || null);
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialEmbedUrl);
+  const [slowLoad, setSlowLoad] = useState(false);
 
+  // Notify parent of server-side generated JWT on mount
   useEffect(() => {
+    if (initialEmbedUrl && initialJwt && onJwt) {
+      onJwt(mode, initialJwt, initialEmbedUrl);
+    }
+  }, []);
+
+  // Client-side fetch — used when no initial data or mode changes
+  useEffect(() => {
+    if (initialEmbedUrl) return;
+
     setEmbedUrl(null);
     setError(null);
     setLoading(true);
+    setSlowLoad(false);
 
     async function fetchEmbedUrl() {
       try {
@@ -28,6 +40,13 @@ export default function SigmaEmbed({ mode = '', label, onJwt }) {
     }
     fetchEmbedUrl();
   }, [mode]);
+
+  // Progressive loading warning — fires after 8s if still waiting on Sigma
+  useEffect(() => {
+    if (!loading) { setSlowLoad(false); return; }
+    const timer = setTimeout(() => setSlowLoad(true), 8000);
+    return () => clearTimeout(timer);
+  }, [loading]);
 
   if (loading) {
     return (
@@ -50,6 +69,12 @@ export default function SigmaEmbed({ mode = '', label, onJwt }) {
             <div key={i} className="h-9 rounded-lg bg-white/[0.03] animate-pulse" style={{ opacity: 1 - i * 0.2 }} />
           ))}
         </div>
+        {slowLoad && (
+          <div className="flex items-center justify-center gap-2 pt-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+            <p className="text-xs text-amber-400/80">Sigma is taking longer than usual — still loading…</p>
+          </div>
+        )}
       </div>
     );
   }

@@ -50,7 +50,7 @@ const spanClass = {
   9: 'col-span-9', 10: 'col-span-10', 11: 'col-span-11', 12: 'col-span-12',
 };
 
-export default function DashboardShell({ user }) {
+export default function DashboardShell({ user, initialEmbedData }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [jwts, setJwts] = useState({});
   const [inspectorOpen, setInspectorOpen] = useState(false);
@@ -185,7 +185,13 @@ export default function DashboardShell({ user }) {
                   </div>
                 )}
                 <div className="flex-1 min-h-0">
-                  <SigmaEmbed mode={embed.mode} label={embed.label} onJwt={handleJwt} />
+                  <SigmaEmbed
+                  mode={embed.mode}
+                  label={embed.label}
+                  onJwt={handleJwt}
+                  initialEmbedUrl={embed.mode === '' ? initialEmbedData?.embedUrl : undefined}
+                  initialJwt={embed.mode === '' ? initialEmbedData?.jwt : undefined}
+                />
                 </div>
               </div>
             ))}
