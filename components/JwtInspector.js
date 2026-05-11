@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import ExpiryBadge from './ExpiryBadge';
 
 function decodeJwt(token) {
   try {
@@ -31,45 +32,6 @@ function parseMaskedEmbed(embedUrl) {
   } catch {
     return { base: 'GET ***', params: [], filters: {} };
   }
-}
-
-// ── Expiry countdown ──────────────────────────────────────────────────────────
-
-function useCountdown(exp) {
-  const [remaining, setRemaining] = useState(null);
-
-  useEffect(() => {
-    if (!exp) return;
-    const tick = () => setRemaining(Math.max(0, exp - Math.floor(Date.now() / 1000)));
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [exp]);
-
-  return remaining;
-}
-
-function ExpiryBadge({ exp }) {
-  const remaining = useCountdown(exp);
-  if (remaining === null) return null;
-
-  const mins = Math.floor(remaining / 60);
-  const secs = remaining % 60;
-  const label = remaining === 0 ? 'Expired' : `${mins}m ${String(secs).padStart(2, '0')}s`;
-  const color = remaining === 0
-    ? 'bg-red-500/15 border-red-500/30 text-red-400'
-    : remaining < 60
-    ? 'bg-red-500/10 border-red-500/20 text-red-400'
-    : remaining < 300
-    ? 'bg-amber-500/10 border-amber-500/20 text-amber-400'
-    : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400';
-
-  return (
-    <span className={`inline-flex items-center gap-1.5 text-[10px] font-mono px-2 py-1 rounded-full border ${color}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${remaining === 0 ? 'bg-red-500' : remaining < 300 ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500 animate-pulse'}`} />
-      {remaining > 0 ? `Expires in ${label}` : 'Expired'}
-    </span>
-  );
 }
 
 // ── Claims ────────────────────────────────────────────────────────────────────

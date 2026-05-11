@@ -5,6 +5,7 @@ import { UserButton } from '@clerk/nextjs';
 import Link from 'next/link';
 import SigmaEmbed from './SigmaEmbed';
 import JwtInspector from './JwtInspector';
+import ExpiryBadge from './ExpiryBadge';
 
 /**
  * NAV_ITEMS — defines the sidebar navigation and the embeds shown per page.
@@ -107,6 +108,11 @@ export default function DashboardShell({ user, initialEmbedData }) {
         </div>
 
         <div className="flex-1" />
+
+        {/* Live JWT expiry countdown — visible without opening the inspector */}
+        {Object.values(jwts)[0]?.jwt && (
+          <ExpiryBadge jwt={Object.values(jwts)[0].jwt} />
+        )}
 
         <button
           onClick={() => setInspectorOpen(true)}
