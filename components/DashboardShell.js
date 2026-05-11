@@ -56,6 +56,10 @@ export default function DashboardShell({ user, initialEmbedData }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [jwts, setJwts] = useState({});
   const [inspectorOpen, setInspectorOpen] = useState(false);
+  // Server-rendered embed URL is only valid on first dashboard load.
+  // Once the user navigates, subsequent visits to the default embed must
+  // fetch a fresh JWT client-side rather than reusing the stale initial one.
+  const [hasNavigated, setHasNavigated] = useState(false);
 
   const activeItem = NAV_ITEMS[activeIndex] ?? NAV_ITEMS[0];
   const isMultiEmbed = activeItem.embeds.length > 1;
@@ -67,6 +71,7 @@ export default function DashboardShell({ user, initialEmbedData }) {
   const handleNavChange = (index) => {
     setActiveIndex(index);
     setJwts({});
+    setHasNavigated(true);
   };
 
   return (
@@ -191,8 +196,8 @@ export default function DashboardShell({ user, initialEmbedData }) {
                   mode={embed.mode}
                   label={embed.label}
                   onJwt={handleJwt}
-                  initialEmbedUrl={embed.mode === '' ? initialEmbedData?.embedUrl : undefined}
-                  initialJwt={embed.mode === '' ? initialEmbedData?.jwt : undefined}
+                  initialEmbedUrl={!hasNavigated && embed.mode === '' ? initialEmbedData?.embedUrl : undefined}
+                  initialJwt={!hasNavigated && embed.mode === '' ? initialEmbedData?.jwt : undefined}
                 />
                 </div>
               </div>
