@@ -3,6 +3,9 @@ import { NextResponse } from 'next/server';
 import { generateSigmaEmbedUrl } from '@/lib/sigma-embed';
 import { resolveUrlParams } from '@/lib/embed-url-params';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 /**
  * GET /api/sigma/jwt?mode=<optional_mode>
  *
@@ -38,6 +41,11 @@ export async function GET(request) {
   try {
     const urlParams = resolveUrlParams(meta, mode);
 
+    // Debug logging — visible in Vercel function logs
+    console.log('[/api/sigma/jwt] mode:', mode);
+    console.log('[/api/sigma/jwt] publicMetadata:', JSON.stringify(meta));
+    console.log('[/api/sigma/jwt] resolved urlParams:', JSON.stringify(urlParams));
+
     const { embedUrl, jwt } = await generateSigmaEmbedUrl({
       email: sigmaEmail,
       accountType,
@@ -48,7 +56,9 @@ export async function GET(request) {
       urlParams,
     });
 
-    return NextResponse.json({ embedUrl, jwt });
+    return NextResponse.json({ embedUrl, jwt }, {
+      headers: { 'Cache-Control': 'no-store, max-age=0' },
+    });
   } catch (error) {
     console.error('[/api/sigma/jwt]', error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
