@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 
-export default function SigmaEmbed({ mode = '', label, onJwt, initialEmbedUrl, initialJwt }) {
+export default function SigmaEmbed({ mode = '', label, onJwt, initialEmbedUrl, initialJwt, sessionLength, refreshKey = 0 }) {
   const [embedUrl, setEmbedUrl] = useState(initialEmbedUrl || null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(!initialEmbedUrl);
@@ -15,9 +15,10 @@ export default function SigmaEmbed({ mode = '', label, onJwt, initialEmbedUrl, i
     }
   }, []);
 
-  // Client-side fetch — used when no initial data or mode changes
+  // Client-side fetch — used when no initial data, mode changes, sessionLength changes, or refreshKey bumps
   useEffect(() => {
-    if (initialEmbedUrl) return;
+    // Skip fetch only on the very first render when we have server-side data and no overrides yet
+    if (initialEmbedUrl && sessionLength === undefined && refreshKey === 0) return;
 
     setEmbedUrl(null);
     setError(null);
@@ -26,8 +27,11 @@ export default function SigmaEmbed({ mode = '', label, onJwt, initialEmbedUrl, i
 
     async function fetchEmbedUrl() {
       try {
-        const params = mode ? `?mode=${encodeURIComponent(mode)}` : '';
-        const res = await fetch(`/api/sigma/jwt${params}`);
+        const params = new URLSearchParams();
+        if (mode) params.set('mode', mode);
+        if (sessionLength !== undefined) params.set('sessionLength', String(sessionLength));
+        const qs = params.toString();
+        const res = await fetch(`/api/sigma/jwt${qs ? `?${qs}` : ''}`);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to generate embed URL.');
         setEmbedUrl(data.embedUrl);
@@ -39,7 +43,7 @@ export default function SigmaEmbed({ mode = '', label, onJwt, initialEmbedUrl, i
       }
     }
     fetchEmbedUrl();
-  }, [mode]);
+  }, [mode, sessionLength, refreshKey]);
 
   // Progressive loading warning — fires after 8s if still waiting on Sigma
   useEffect(() => {

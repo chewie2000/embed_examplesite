@@ -31,6 +31,8 @@ export async function GET(request) {
 
   const { searchParams } = new URL(request.url);
   const mode = searchParams.get('mode') || '';
+  const sessionLengthParam = searchParams.get('sessionLength');
+  const sessionLength = sessionLengthParam ? parseInt(sessionLengthParam) : undefined;
 
   try {
     const { embedUrl, jwt } = await generateSigmaEmbedUrl({
@@ -39,6 +41,7 @@ export async function GET(request) {
       teams,
       userAttributes,
       mode,
+      sessionLength,
     });
 
     return NextResponse.json({ embedUrl, jwt });

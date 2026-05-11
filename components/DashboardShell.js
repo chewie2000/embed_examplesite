@@ -60,6 +60,10 @@ export default function DashboardShell({ user, initialEmbedData }) {
   // Once the user navigates, subsequent visits to the default embed must
   // fetch a fresh JWT client-side rather than reusing the stale initial one.
   const [hasNavigated, setHasNavigated] = useState(false);
+  // Custom session length (seconds) — used by the JWT inspector for demo purposes.
+  // undefined means "use server default from SESSION_LENGTH env var".
+  const [sessionLength, setSessionLength] = useState(undefined);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const activeItem = NAV_ITEMS[activeIndex] ?? NAV_ITEMS[0];
   const isMultiEmbed = activeItem.embeds.length > 1;
@@ -73,6 +77,11 @@ export default function DashboardShell({ user, initialEmbedData }) {
     setJwts({});
     setHasNavigated(true);
   };
+
+  const handleRegenerate = useCallback((newLength) => {
+    setSessionLength(newLength);
+    setRefreshKey((k) => k + 1);
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#09090b] flex flex-col">
@@ -198,6 +207,8 @@ export default function DashboardShell({ user, initialEmbedData }) {
                   onJwt={handleJwt}
                   initialEmbedUrl={!hasNavigated && embed.mode === '' ? initialEmbedData?.embedUrl : undefined}
                   initialJwt={!hasNavigated && embed.mode === '' ? initialEmbedData?.jwt : undefined}
+                  sessionLength={sessionLength}
+                  refreshKey={refreshKey}
                 />
                 </div>
               </div>
@@ -207,7 +218,14 @@ export default function DashboardShell({ user, initialEmbedData }) {
         </main>
       </div>
 
-      <JwtInspector jwts={jwts} embeds={activeItem.embeds} open={inspectorOpen} onClose={() => setInspectorOpen(false)} />
+      <JwtInspector
+        jwts={jwts}
+        embeds={activeItem.embeds}
+        open={inspectorOpen}
+        onClose={() => setInspectorOpen(false)}
+        sessionLength={sessionLength}
+        onRegenerate={handleRegenerate}
+      />
     </div>
   );
 }

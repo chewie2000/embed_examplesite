@@ -347,9 +347,100 @@ function FlowDiagram({ embedCount }) {
   );
 }
 
+// ── Session length control ────────────────────────────────────────────────────
+
+const PRESETS = [
+  { label: '30s',  value: 30,    note: 'Fast expiry demo' },
+  { label: '1m',   value: 60 },
+  { label: '5m',   value: 300 },
+  { label: '1h',   value: 3600,  note: 'Default' },
+];
+
+function SessionLengthControl({ sessionLength, onRegenerate }) {
+  const [input, setInput] = useState(sessionLength?.toString() ?? '');
+
+  const apply = (value) => {
+    const n = parseInt(value);
+    if (!isNaN(n) && n >= 30) {
+      setInput(String(n));
+      onRegenerate(n);
+    }
+  };
+
+  return (
+    <div className="py-3 space-y-4">
+      <div className="bg-amber-500/[0.06] border border-amber-500/20 rounded-lg px-3 py-2.5">
+        <p className="text-[10px] text-amber-300 leading-relaxed">
+          <span className="font-semibold">Demo control.</span> Override the JWT <code className="bg-amber-500/10 px-1 py-0.5 rounded text-amber-200">exp</code> claim to see what happens when a token expires while the embed is in use. Minimum 30 seconds.
+        </p>
+      </div>
+
+      <div>
+        <p className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider mb-2">Quick presets</p>
+        <div className="grid grid-cols-2 gap-2">
+          {PRESETS.map(({ label, value, note }) => (
+            <button
+              key={value}
+              onClick={() => apply(value)}
+              className={`text-left px-3 py-2.5 rounded-lg border transition-all ${
+                sessionLength === value
+                  ? 'bg-indigo-500/15 border-indigo-500/30 text-indigo-300'
+                  : 'bg-white/[0.03] border-white/[0.06] text-zinc-300 hover:border-white/[0.12] hover:bg-white/[0.05]'
+              }`}
+            >
+              <p className="text-sm font-mono font-semibold">{label}</p>
+              {note && <p className="text-[10px] text-zinc-500 mt-0.5">{note}</p>}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <p className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider mb-2">Custom (seconds)</p>
+        <div className="flex gap-2">
+          <input
+            type="number"
+            min="30"
+            max="2592000"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="e.g. 45"
+            className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-indigo-500/50"
+          />
+          <button
+            onClick={() => apply(input)}
+            disabled={!input || parseInt(input) < 30}
+            className="px-3 py-2 text-xs font-medium rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed text-white transition-colors"
+          >
+            Apply & regenerate
+          </button>
+        </div>
+        <p className="text-[10px] text-zinc-600 mt-1.5">Range: 30 – 2,592,000 seconds (30 days max)</p>
+      </div>
+
+      <div>
+        <p className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider mb-2">Active</p>
+        <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2.5 flex items-center justify-between">
+          <span className="text-xs text-zinc-300 font-mono">
+            {sessionLength !== undefined ? `${sessionLength}s` : 'Server default (SESSION_LENGTH)'}
+          </span>
+          {sessionLength !== undefined && (
+            <button
+              onClick={() => { setInput(''); onRegenerate(undefined); }}
+              className="text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors"
+            >
+              Reset to default
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Root component ────────────────────────────────────────────────────────────
 
-export default function JwtInspector({ jwts, embeds, open, onClose }) {
+export default function JwtInspector({ jwts, embeds, open, onClose, sessionLength, onRegenerate }) {
   const [tab, setTab] = useState('flow');
 
   const firstEntry = Object.values(jwts)[0];
@@ -386,7 +477,7 @@ export default function JwtInspector({ jwts, embeds, open, onClose }) {
 
         {/* Tabs */}
         <div className="flex border-b border-white/[0.06] px-5 gap-4">
-          {[['flow', 'Auth Flow'], ['claims', 'Decoded Claims']].map(([t, label]) => (
+          {[['flow', 'Auth Flow'], ['claims', 'Decoded Claims'], ['session', 'Session']].map(([t, label]) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -403,6 +494,7 @@ export default function JwtInspector({ jwts, embeds, open, onClose }) {
         <div className="flex-1 overflow-y-auto px-5">
           {tab === 'flow' && <FlowDiagram embedCount={embeds.length} />}
           {tab === 'claims' && <ClaimsPanel jwts={jwts} embeds={embeds} />}
+          {tab === 'session' && <SessionLengthControl sessionLength={sessionLength} onRegenerate={onRegenerate} />}
         </div>
       </div>
     </>
