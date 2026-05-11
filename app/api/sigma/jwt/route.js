@@ -1,6 +1,7 @@
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { generateSigmaEmbedUrl } from '@/lib/sigma-embed';
+import { resolveUrlParams } from '@/lib/embed-url-params';
 
 /**
  * GET /api/sigma/jwt?mode=<optional_mode>
@@ -35,6 +36,8 @@ export async function GET(request) {
   const sessionLength = sessionLengthParam ? parseInt(sessionLengthParam) : undefined;
 
   try {
+    const urlParams = resolveUrlParams(meta, mode);
+
     const { embedUrl, jwt } = await generateSigmaEmbedUrl({
       email: sigmaEmail,
       accountType,
@@ -42,6 +45,7 @@ export async function GET(request) {
       userAttributes,
       mode,
       sessionLength,
+      urlParams,
     });
 
     return NextResponse.json({ embedUrl, jwt });

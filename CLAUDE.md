@@ -52,18 +52,77 @@ bd close <id>         # Complete work
 
 ## Build & Test
 
-_Add your build and test commands here_
-
 ```bash
-# Example:
-# npm install
-# npm test
+npm run dev        # Dev server → http://localhost:3000
+npm run build      # Production build (run before pushing to verify no build errors)
+npm run start      # Serve production build locally
 ```
+
+No test suite — verify changes manually via the dev server. Always run `npm run build` before declaring work done if you touched any component or API route.
+
+---
 
 ## Architecture Overview
 
-_Add a brief overview of your project architecture_
+```
+Browser
+  │
+  ├── GET /dashboard
+  │     └── middleware.js verifies session cookie → renders DashboardShell
+  │
+  └── GET /api/sigma/jwt?mode=<mode>
+        └── Verifies session → lib/sigma-embed.js signs JWT with SIGMA_SECRET
+              └── Returns signed embed URL → SigmaEmbed renders iframe
+```
+
+**Key files:**
+
+| File | Role |
+|---|---|
+| `middleware.js` | Protects `/dashboard` — redirects unauthenticated users to `/login` |
+| `app/api/auth/login/route.js` | Validates credentials, writes encrypted session cookie |
+| `app/api/sigma/jwt/route.js` | Verifies session, calls `sigma-embed.js`, returns signed URL |
+| `lib/sigma-embed.js` | Builds JWT payload and signs embed URL (HMAC-SHA256 via `jose`) |
+| `lib/session.js` | Session creation and verification (encrypted cookie, 8hr expiry) |
+| `components/DashboardShell.js` | Nav + sidebar + embed container — **NAV_ITEMS is the multi-embed config** |
+| `components/SigmaEmbed.js` | Fetches JWT and renders `<iframe>` |
+
+**Deploy:** Vercel auto-deploys on every push to `master`. Every push is production.
+
+---
 
 ## Conventions & Patterns
 
-_Add your project-specific conventions here_
+### Adding a new embedded workbook
+
+This is the most common task. Three steps only:
+
+1. Add env var in Vercel: `SALES_SIGMA_BASE_URL=https://app.sigmacomputing.com/...`
+2. Add a nav item in `components/DashboardShell.js`:
+   ```js
+   { label: 'Sales', mode: 'sales', icon: (...) }
+   ```
+3. Push — Vercel picks it up automatically.
+
+The `mode` string (lowercase) maps to `{MODE_UPPERCASE}_SIGMA_BASE_URL`. No other code changes needed.
+
+### Environment variables
+
+- `SIGMA_CLIENT_ID` / `SIGMA_SECRET` — from Sigma Admin → Developer Access → Embedding
+- `SIGMA_BASE_URL` — default workbook (no mode prefix)
+- `SESSION_SECRET` — 32-byte random base64 string
+- `DEMO_USER_EMAIL` / `DEMO_USER_PASSWORD` — demo login credentials
+- Per-workbook: `{MODE}_SIGMA_BASE_URL` (e.g. `SALES_SIGMA_BASE_URL`)
+
+In `.env.local` for local dev; in Vercel dashboard for production.
+
+### Auth
+
+Current demo auth is credential-based via env vars. To upgrade:
+- **Clerk** (recommended): swap `lib/session.js` usage in the JWT route with `auth()` from `@clerk/nextjs/server` — `lib/sigma-embed.js` is unchanged
+- **NextAuth + Okta/Entra**: same principle — only the session-reading code in the JWT route changes
+
+### Session Security
+
+- SIGMA_SECRET never leaves the server — browser only receives a signed, expiring URL
+- Production recommendation: move signing to a dedicated app server; only `lib/sigma-embed.js` changes (replace local `jose` signing with a fetch to the signing service)

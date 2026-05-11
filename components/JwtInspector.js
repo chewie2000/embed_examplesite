@@ -18,15 +18,18 @@ function parseMaskedEmbed(embedUrl) {
     const org = url.pathname.split('/')[1] ?? '…';
     const params = new URLSearchParams(url.search);
     const lines = [];
+    const filters = {}; // non-`:`-prefixed params = URL filters from Clerk metadata
     for (const [key] of params.entries()) {
-      lines.push(`  ${key}=${key === ':jwt' ? '***' : params.get(key)}`);
+      lines.push({ key, value: key === ':jwt' ? '***' : params.get(key), isFilter: !key.startsWith(':') });
+      if (!key.startsWith(':')) filters[key] = params.get(key);
     }
     return {
       base: `GET ${url.origin}/${org}/workbook/***`,
       params: lines,
+      filters,
     };
   } catch {
-    return { base: 'GET ***', params: [] };
+    return { base: 'GET ***', params: [], filters: {} };
   }
 }
 
@@ -217,16 +220,52 @@ function ClaimsPanel({ jwts, embeds }) {
               return (
                 <div>
                   <p className="text-[10px] text-zinc-500 mb-1">Sigma embed API call</p>
-                  <div className="text-[11px] font-mono text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-2 py-2 rounded break-all leading-relaxed">
+                  <div className="text-[11px] font-mono bg-emerald-500/10 border border-emerald-500/20 px-2 py-2 rounded break-all leading-relaxed">
                     <span className="text-emerald-400 font-semibold">{base}</span>
                     {params.map((p, i) => (
-                      <div key={i} className="text-emerald-600 pl-2">{i === 0 ? '?' : '&'}{p.trim()}</div>
+                      <div
+                        key={i}
+                        className={`pl-2 ${p.isFilter ? 'text-amber-300' : 'text-emerald-600'}`}
+                        title={p.isFilter ? 'URL filter from Clerk publicMetadata' : 'Sigma embed control'}
+                      >
+                        {i === 0 ? '?' : '&'}{p.key}={p.value}
+                        {p.isFilter && <span className="text-[9px] text-amber-500 ml-1.5">← from metadata</span>}
+                      </div>
                     ))}
                   </div>
                 </div>
               );
             })()}
           </div>
+
+          {/* URL filter params from Clerk metadata (non-JWT) */}
+          {embedUrl && (() => {
+            const { filters } = parseMaskedEmbed(embedUrl);
+            const entries = Object.entries(filters);
+            if (entries.length === 0) return null;
+            return (
+              <div className="bg-amber-500/[0.06] border border-amber-500/20 rounded-lg p-3 mb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <p className="text-[10px] font-medium text-amber-400 uppercase tracking-wider">URL filters</p>
+                  <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase tracking-wider">
+                    from metadata
+                  </span>
+                </div>
+                <p className="text-[10px] text-amber-300/80 leading-relaxed mb-2">
+                  These come from <code className="bg-amber-500/10 px-1 rounded">publicMetadata</code> and are appended directly to the embed URL — they are NOT part of the JWT.
+                </p>
+                <div className="space-y-1">
+                  {entries.map(([k, v]) => (
+                    <div key={k} className="flex items-center gap-2 text-[11px] font-mono">
+                      <span className="text-amber-400">{k}</span>
+                      <span className="text-amber-600">=</span>
+                      <span className="text-amber-200">{v}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Claims */}
           {Object.entries(claims).map(([key, value]) => (
