@@ -23,25 +23,27 @@ import JwtInspector from './JwtInspector';
  */
 const NAV_ITEMS = [
   {
-    label: 'Workbook Embed',
+    label: 'Workbook - Internal User example',
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
       </svg>
     ),
     embeds: [
-      { mode: '', label: 'Workbook Embed', span: 12 },
+      { mode: '', label: 'Workbook - Internal User example', span: 12 },
     ],
   },
-  // Multi-embed example — uncomment and configure env vars to use:
-  // {
-  //   label: 'Sales',
-  //   icon: (...),
-  //   embeds: [
-  //     { mode: 'kpi',   label: 'KPIs',       span: 4 },
-  //     { mode: 'sales', label: 'Sales Trend', span: 8 },
-  //   ],
-  // },
+  {
+    label: 'Workbook - Secured filtered URL',
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+      </svg>
+    ),
+    embeds: [
+      { mode: 'secured', label: 'Workbook - Secured filtered URL', span: 12 },
+    ],
+  },
 ];
 
 const spanClass = {
