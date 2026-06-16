@@ -1,6 +1,7 @@
 import { currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { generateSigmaEmbedUrl } from '@/lib/sigma-embed';
+import { resolveUrlParams } from '@/lib/embed-url-params';
 import DashboardShell from '@/components/DashboardShell';
 
 export default async function DashboardPage() {
@@ -25,6 +26,11 @@ export default async function DashboardPage() {
       teams: meta.teams ?? [],
       userAttributes: meta.userAttributes ?? {},
       mode: '',
+      // Apply the same per-mode URL params as the /api/sigma/jwt route so the
+      // server-rendered first load matches client navigation (e.g. example1's
+      // menu bar). Without this, the menu only appeared after navigating away
+      // and back.
+      urlParams: resolveUrlParams(meta, ''),
     });
   } catch {
     // Falls back to client-side fetch in SigmaEmbed
