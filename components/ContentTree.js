@@ -85,7 +85,10 @@ function TreeNode({ node, depth, compact, selectedUrlId, onSelectWorkbook }) {
 
         <TypeIcon type={node.type} open={open} />
 
-        <span className={`truncate ${isFolder ? 'text-zinc-200 font-medium' : isSelected ? 'text-indigo-300' : 'text-zinc-300'}`}>
+        <span
+          title={node.name}
+          className={`truncate ${isFolder ? 'text-zinc-200 font-medium' : isSelected ? 'text-indigo-300' : 'text-zinc-300'}`}
+        >
           {node.name}
         </span>
 
