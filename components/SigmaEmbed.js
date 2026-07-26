@@ -32,12 +32,18 @@ export default function SigmaEmbed({
   const [bookmarkId, setBookmarkId] = useState(initialBookmarkId);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [feedback, setFeedback] = useState(null); // { type: 'success'|'error', text } | null
+  // Busy indicators — so Save/Delete visibly show "in progress" for the whole
+  // select→wait→action→wait-for-confirmation window, rather than the button
+  // looking idle while something is actually happening in the background.
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const iframeRef = useRef(null);
-  // bookmarkId most recently sent for update/delete, cleared once the matching
-  // outbound confirmation arrives. Sigma can fail these internally (e.g. a
-  // stale/deleted bookmark id) without ever telling us — cross-origin, so its
-  // uncaught errors never reach us as a workbook:error event — so each
-  // watchdog below self-heals by clearing the reference if nothing arrives.
+  // bookmarkId (or, for create, a boolean flag) most recently sent, cleared
+  // once the matching outbound confirmation arrives. Sigma can fail these
+  // internally (e.g. a stale/deleted bookmark id) without ever telling us —
+  // cross-origin, so its uncaught errors never reach us as a workbook:error
+  // event — so each watchdog below self-heals if nothing arrives in time.
+  const pendingCreateRef = useRef(false);
   const pendingUpdateIdRef = useRef(null);
   const pendingDeleteIdRef = useRef(null);
 
@@ -73,21 +79,40 @@ export default function SigmaEmbed({
 
   const persistBookmark = async (entry) => {
     try {
-      await fetch('/api/bookmarks', {
+      const res = await fetch('/api/bookmarks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ urlId, bookmarkId: entry?.id ?? null, name: entry?.name }),
       });
-    } catch {
-      // best-effort — the Sigma-side bookmark still exists even if our
-      // mapping fails to persist; a page refresh's fresh GET will re-sync.
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        console.error('[SigmaEmbed] /api/bookmarks POST failed:', res.status, data.error);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      // Network-level failure — the Sigma-side bookmark action still
+      // succeeded even though our mapping failed to persist.
+      console.error('[SigmaEmbed] /api/bookmarks POST network error:', err.message);
+      return false;
     }
   };
 
   const handleSave = () => {
+    setSaving(true);
     if (!bookmarkId) {
       const name = `${label || 'Exploration'} - bookmark`;
       postToIframe({ type: 'workbook:bookmark:create', name, isDefault: false, isShared: false });
+      pendingCreateRef.current = true;
+      // Watchdog — if Sigma never confirms the create at all, don't leave the
+      // button stuck showing "Saving…" forever.
+      setTimeout(() => {
+        if (pendingCreateRef.current) {
+          pendingCreateRef.current = false;
+          setSaving(false);
+          setFeedback({ type: 'error', text: "Sigma didn't confirm the save — check the browser console for details, then try again." });
+        }
+      }, 4000);
       return;
     }
     const targetId = bookmarkId;
@@ -106,6 +131,7 @@ export default function SigmaEmbed({
       setTimeout(() => {
         if (pendingUpdateIdRef.current === targetId) {
           pendingUpdateIdRef.current = null;
+          setSaving(false);
           setBookmarkId(null);
           persistBookmark(null);
           setFeedback({
@@ -124,6 +150,7 @@ export default function SigmaEmbed({
       return;
     }
     setConfirmingDelete(false);
+    setDeleting(true);
     const targetId = bookmarkId;
     // Same select-first pattern as update — the docs don't document a
     // "selected" prerequisite for delete, but it's consistent with the rest
@@ -139,6 +166,7 @@ export default function SigmaEmbed({
       setTimeout(() => {
         if (pendingDeleteIdRef.current === targetId) {
           pendingDeleteIdRef.current = null;
+          setDeleting(false);
           setBookmarkId(null);
           persistBookmark(null);
           onBookmarkDeleted?.();
@@ -161,31 +189,43 @@ export default function SigmaEmbed({
       }
 
       if (data.type === 'workbook:bookmark:oncreate') {
+        pendingCreateRef.current = false;
+        setSaving(false);
         // Explicitly select the new bookmark rather than assume Sigma does —
         // guarantees the very next Save can call update, not fail on it. No
         // delay needed here: creating a bookmark only happens while already
         // in Explore mode, so there's no pending mode switch to race against.
         postToIframe({ type: 'workbook:bookmark:select', bookmarkId: data.bookmarkId });
         setBookmarkId(data.bookmarkId);
-        persistBookmark({ id: data.bookmarkId, name: data.bookmarkName });
-        setFeedback({ type: 'success', text: `Bookmark "${data.bookmarkName}" saved.` });
+        persistBookmark({ id: data.bookmarkId, name: data.bookmarkName }).then((persisted) => {
+          setFeedback(
+            persisted
+              ? { type: 'success', text: `Bookmark "${data.bookmarkName}" saved.` }
+              : { type: 'error', text: `Bookmark "${data.bookmarkName}" saved in Sigma, but failed to save to your profile — it may not appear in the tree yet.` }
+          );
+        });
         onBookmarkChange?.();
         // Explore → Save → View: reinforces the save as a discrete action
         // rather than leaving the user sitting in an open-ended Explore session.
         setTimeout(() => sendWorkbookMode('view'), BOOKMARK_ACTION_DELAY_MS);
       } else if (data.type === 'workbook:bookmark:onupdate') {
         pendingUpdateIdRef.current = null;
+        setSaving(false);
         setFeedback({ type: 'success', text: 'Bookmark updated.' });
         setTimeout(() => sendWorkbookMode('view'), BOOKMARK_ACTION_DELAY_MS);
       } else if (data.type === 'workbook:bookmark:ondelete') {
         pendingDeleteIdRef.current = null;
+        setDeleting(false);
         setBookmarkId(null);
         persistBookmark(null);
         setFeedback({ type: 'success', text: 'Bookmark deleted.' });
         onBookmarkDeleted?.();
       } else if (data.type === 'workbook:error') {
+        pendingCreateRef.current = false;
         pendingUpdateIdRef.current = null;
         pendingDeleteIdRef.current = null;
+        setSaving(false);
+        setDeleting(false);
         const text = data.message || 'Something went wrong with that bookmark action.';
         setFeedback({ type: 'error', text: data.code ? `${text} (${data.code})` : text });
       }
@@ -232,6 +272,9 @@ export default function SigmaEmbed({
     setBookmarkId(initialBookmarkId);
     setConfirmingDelete(false);
     setFeedback(null);
+    setSaving(false);
+    setDeleting(false);
+    pendingCreateRef.current = false;
     pendingUpdateIdRef.current = null;
     pendingDeleteIdRef.current = null;
 
@@ -363,27 +406,34 @@ export default function SigmaEmbed({
               {workbookMode === 'explore' && (
                 <button
                   onClick={handleSave}
-                  disabled={!iframeLoaded}
-                  className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  disabled={!iframeLoaded || saving}
+                  className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 transition-all disabled:opacity-70 disabled:cursor-wait"
                 >
-                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                  </svg>
-                  {bookmarkId ? 'Update bookmark' : 'Save as bookmark'}
+                  {saving ? (
+                    <span className="w-3 h-3 border-[1.5px] border-emerald-300 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                    </svg>
+                  )}
+                  {saving ? 'Saving…' : bookmarkId ? 'Update bookmark' : 'Save as bookmark'}
                 </button>
               )}
               {autoExplore && bookmarkId && (
                 <button
                   onClick={handleDeleteClick}
-                  disabled={!iframeLoaded}
+                  disabled={!iframeLoaded || deleting}
                   title="Delete your saved bookmark for this workbook"
-                  className={`text-xs px-2.5 py-1 rounded-md transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
+                  className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md transition-all disabled:opacity-70 disabled:cursor-wait ${
                     confirmingDelete
                       ? 'bg-red-500/20 text-red-300'
                       : 'text-zinc-500 hover:text-red-300 hover:bg-red-500/10'
                   }`}
                 >
-                  {confirmingDelete ? 'Confirm delete?' : 'Delete bookmark'}
+                  {deleting && (
+                    <span className="w-3 h-3 border-[1.5px] border-red-300 border-t-transparent rounded-full animate-spin" />
+                  )}
+                  {deleting ? 'Deleting…' : confirmingDelete ? 'Confirm delete?' : 'Delete bookmark'}
                 </button>
               )}
             </div>
