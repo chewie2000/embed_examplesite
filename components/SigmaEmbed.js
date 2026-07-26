@@ -14,7 +14,7 @@ const BOOKMARK_ACTION_DELAY_MS = 700;
 
 export default function SigmaEmbed({
   mode = '', urlId, label, onJwt, initialEmbedUrl, initialJwt, sessionLength, refreshKey = 0,
-  showModeToggle = false, initialBookmarkId = null, autoExplore = false, onBookmarkChange,
+  showModeToggle = false, initialBookmarkId = null, autoExplore = false, onBookmarkChange, onBookmarkDeleted,
 }) {
   // Distinct key for ad hoc content-browser embeds (discovered urlId) vs the
   // pre-configured {mode}_SIGMA_BASE_URL examples — used for onJwt/inspector keying.
@@ -144,14 +144,18 @@ export default function SigmaEmbed({
         persistBookmark({ id: data.bookmarkId, name: data.bookmarkName });
         setFeedback({ type: 'success', text: `Bookmark "${data.bookmarkName}" saved.` });
         onBookmarkChange?.();
+        // Explore → Save → View: reinforces the save as a discrete action
+        // rather than leaving the user sitting in an open-ended Explore session.
+        setTimeout(() => sendWorkbookMode('view'), BOOKMARK_ACTION_DELAY_MS);
       } else if (data.type === 'workbook:bookmark:onupdate') {
         setFeedback({ type: 'success', text: 'Bookmark updated.' });
+        setTimeout(() => sendWorkbookMode('view'), BOOKMARK_ACTION_DELAY_MS);
       } else if (data.type === 'workbook:bookmark:ondelete') {
         pendingDeleteIdRef.current = null;
         setBookmarkId(null);
         persistBookmark(null);
         setFeedback({ type: 'success', text: 'Bookmark deleted.' });
-        onBookmarkChange?.();
+        onBookmarkDeleted?.();
       } else if (data.type === 'workbook:error') {
         pendingDeleteIdRef.current = null;
         const text = data.message || 'Something went wrong with that bookmark action.';
@@ -338,7 +342,7 @@ export default function SigmaEmbed({
                   {bookmarkId ? 'Update bookmark' : 'Save as bookmark'}
                 </button>
               )}
-              {bookmarkId && (
+              {autoExplore && bookmarkId && (
                 <button
                   onClick={handleDeleteClick}
                   disabled={!iframeLoaded}

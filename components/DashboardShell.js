@@ -106,12 +106,28 @@ export default function DashboardShell({ user, initialEmbedData }) {
   }, []);
 
   const handleSelectBookmark = useCallback((node) => {
-    setSelectedTreeWorkbook({ urlId: node.urlId, name: node.name, bookmarkId: node.bookmarkId, autoExplore: true });
+    setSelectedTreeWorkbook({
+      urlId: node.urlId,
+      name: node.name,
+      parentName: node.parentName,
+      bookmarkId: node.bookmarkId,
+      autoExplore: true,
+    });
     setJwts({});
     setHasNavigated(true);
   }, []);
 
   const handleBookmarkChange = useCallback(() => {
+    setTreeRefreshSignal((k) => k + 1);
+  }, []);
+
+  // Fires after a confirmed bookmark delete — the bookmark-opened view is now
+  // orphaned, so drop back to the plain parent workbook and refresh the tree
+  // so the (now-gone) bookmark row disappears.
+  const handleBookmarkDeleted = useCallback(() => {
+    setSelectedTreeWorkbook((prev) =>
+      prev ? { urlId: prev.urlId, name: prev.parentName || prev.name, bookmarkId: null, autoExplore: false } : prev
+    );
     setTreeRefreshSignal((k) => k + 1);
   }, []);
 
@@ -277,6 +293,7 @@ export default function DashboardShell({ user, initialEmbedData }) {
                 initialBookmarkId={selectedTreeWorkbook.bookmarkId}
                 autoExplore={selectedTreeWorkbook.autoExplore}
                 onBookmarkChange={handleBookmarkChange}
+                onBookmarkDeleted={handleBookmarkDeleted}
               />
             </div>
           ) : (
