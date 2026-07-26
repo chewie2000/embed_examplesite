@@ -6,7 +6,11 @@ import { useState, useEffect, useRef } from 'react';
 const IFRAME_LOAD_TIMEOUT_MS = 25_000;
 const FETCH_SLOW_WARNING_MS = 8_000;
 
-export default function SigmaEmbed({ mode = '', label, onJwt, initialEmbedUrl, initialJwt, sessionLength, refreshKey = 0 }) {
+export default function SigmaEmbed({ mode = '', urlId, label, onJwt, initialEmbedUrl, initialJwt, sessionLength, refreshKey = 0 }) {
+  // Distinct key for ad hoc content-browser embeds (discovered urlId) vs the
+  // pre-configured {mode}_SIGMA_BASE_URL examples — used for onJwt/inspector keying.
+  const jwtKey = urlId ? `tree:${urlId}` : mode;
+
   const [embedUrl, setEmbedUrl] = useState(initialEmbedUrl || null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(!initialEmbedUrl);
@@ -20,11 +24,11 @@ export default function SigmaEmbed({ mode = '', label, onJwt, initialEmbedUrl, i
   // Notify parent of server-side generated JWT on mount
   useEffect(() => {
     if (initialEmbedUrl && initialJwt && onJwt) {
-      onJwt(mode, initialJwt, initialEmbedUrl);
+      onJwt(jwtKey, initialJwt, initialEmbedUrl);
     }
   }, []);
 
-  // Client-side fetch — used when no initial data, mode changes, sessionLength changes, or refreshKey bumps
+  // Client-side fetch — used when no initial data, mode/urlId changes, sessionLength changes, or refreshKey bumps
   useEffect(() => {
     // Skip fetch only on the very first render when we have server-side data and no overrides yet
     if (initialEmbedUrl && sessionLength === undefined && refreshKey === 0 && localRefreshKey === 0) return;
@@ -39,14 +43,15 @@ export default function SigmaEmbed({ mode = '', label, onJwt, initialEmbedUrl, i
     async function fetchEmbedUrl() {
       try {
         const params = new URLSearchParams();
-        if (mode) params.set('mode', mode);
+        if (urlId) params.set('urlId', urlId);
+        else if (mode) params.set('mode', mode);
         if (sessionLength !== undefined) params.set('sessionLength', String(sessionLength));
         const qs = params.toString();
         const res = await fetch(`/api/sigma/jwt${qs ? `?${qs}` : ''}`);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to generate embed URL.');
         setEmbedUrl(data.embedUrl);
-        if (onJwt && data.jwt) onJwt(mode, data.jwt, data.embedUrl);
+        if (onJwt && data.jwt) onJwt(jwtKey, data.jwt, data.embedUrl);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -54,7 +59,7 @@ export default function SigmaEmbed({ mode = '', label, onJwt, initialEmbedUrl, i
       }
     }
     fetchEmbedUrl();
-  }, [mode, sessionLength, refreshKey, localRefreshKey]);
+  }, [mode, urlId, sessionLength, refreshKey, localRefreshKey]);
 
   // Progressive loading warning during JWT fetch
   useEffect(() => {

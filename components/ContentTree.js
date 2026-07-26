@@ -45,21 +45,32 @@ const TYPE_LABEL = {
   dataset: 'dataset',
 };
 
+// Only workbooks are directly embeddable in this demo's click-to-view flow.
+const EMBEDDABLE_TYPES = new Set(['workbook']);
+
 // ── Recursive tree node ───────────────────────────────────────────────────────
-function TreeNode({ node, depth }) {
+function TreeNode({ node, depth, compact, selectedUrlId, onSelectWorkbook }) {
   const isFolder = node.type === 'folder';
+  const isEmbeddable = EMBEDDABLE_TYPES.has(node.type);
+  const isSelected = isEmbeddable && node.urlId === selectedUrlId;
   const hasChildren = isFolder && Array.isArray(node.children) && node.children.length > 0;
   const [open, setOpen] = useState(depth < 1); // top level expanded by default
+
+  const handleClick = () => {
+    if (isFolder) setOpen((o) => !o);
+    else if (isEmbeddable) onSelectWorkbook?.(node);
+  };
 
   return (
     <li>
       <div
-        role={isFolder ? 'button' : undefined}
-        onClick={isFolder ? () => setOpen((o) => !o) : undefined}
-        className={`group flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm ${
-          isFolder ? 'cursor-pointer hover:bg-white/[0.04]' : 'hover:bg-white/[0.02]'
-        }`}
-        style={{ paddingLeft: `${depth * 18 + 8}px` }}
+        role={isFolder || isEmbeddable ? 'button' : undefined}
+        onClick={handleClick}
+        title={!isFolder && !isEmbeddable ? `${TYPE_LABEL[node.type] ?? node.type} — not embeddable in this demo` : undefined}
+        className={`group flex items-center gap-2 rounded-lg ${compact ? 'px-1.5 py-1' : 'px-2 py-1.5'} text-sm ${
+          isFolder || isEmbeddable ? 'cursor-pointer hover:bg-white/[0.04]' : 'cursor-default opacity-60'
+        } ${isSelected ? 'bg-indigo-500/10 border border-indigo-500/20' : 'border border-transparent'}`}
+        style={{ paddingLeft: `${depth * (compact ? 14 : 18) + (compact ? 4 : 8)}px` }}
       >
         {isFolder ? (
           <svg
@@ -74,16 +85,16 @@ function TreeNode({ node, depth }) {
 
         <TypeIcon type={node.type} open={open} />
 
-        <span className={`truncate ${isFolder ? 'text-zinc-200 font-medium' : 'text-zinc-300'}`}>
+        <span className={`truncate ${isFolder ? 'text-zinc-200 font-medium' : isSelected ? 'text-indigo-300' : 'text-zinc-300'}`}>
           {node.name}
         </span>
 
-        {!isFolder && TYPE_LABEL[node.type] && (
+        {!compact && !isFolder && TYPE_LABEL[node.type] && (
           <span className="ml-auto text-[10px] uppercase tracking-wide text-zinc-600 group-hover:text-zinc-500">
             {TYPE_LABEL[node.type]}
           </span>
         )}
-        {isFolder && hasChildren && (
+        {!compact && isFolder && hasChildren && (
           <span className="ml-auto text-[10px] text-zinc-600">{node.children.length}</span>
         )}
       </div>
@@ -91,7 +102,14 @@ function TreeNode({ node, depth }) {
       {hasChildren && open && (
         <ul>
           {node.children.map((child) => (
-            <TreeNode key={child.key} node={child} depth={depth + 1} />
+            <TreeNode
+              key={child.key}
+              node={child}
+              depth={depth + 1}
+              compact={compact}
+              selectedUrlId={selectedUrlId}
+              onSelectWorkbook={onSelectWorkbook}
+            />
           ))}
         </ul>
       )}
@@ -100,7 +118,12 @@ function TreeNode({ node, depth }) {
 }
 
 // ── Container ─────────────────────────────────────────────────────────────────
-export default function ContentTree() {
+/**
+ * @param {boolean} [compact]         Tighter sidebar rendering (vs. full-panel).
+ * @param {string}  [selectedUrlId]   urlId of the currently embedded workbook, for highlighting.
+ * @param {function} [onSelectWorkbook] Called with the clicked workbook node ({ urlId, name, ... }).
+ */
+export default function ContentTree({ compact = false, selectedUrlId, onSelectWorkbook }) {
   const [state, setState] = useState({ status: 'loading' });
 
   const load = useCallback(async () => {
@@ -120,12 +143,12 @@ export default function ContentTree() {
   // ── Loading ──
   if (state.status === 'loading') {
     return (
-      <div className="p-4 space-y-2">
-        {[...Array(7)].map((_, i) => (
+      <div className={compact ? 'p-2 space-y-1.5' : 'p-4 space-y-2'}>
+        {[...Array(compact ? 4 : 7)].map((_, i) => (
           <div
             key={i}
-            className="h-8 rounded-lg bg-white/[0.03] animate-pulse"
-            style={{ marginLeft: `${(i % 3) * 18}px`, opacity: 1 - (i % 3) * 0.15 }}
+            className={`${compact ? 'h-6' : 'h-8'} rounded-lg bg-white/[0.03] animate-pulse`}
+            style={{ marginLeft: `${(i % 3) * (compact ? 10 : 18)}px`, opacity: 1 - (i % 3) * 0.15 }}
           />
         ))}
       </div>
@@ -135,19 +158,19 @@ export default function ContentTree() {
   // ── Error ──
   if (state.status === 'error') {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-4 p-6 text-center">
-        <div className="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-          <svg className="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <div className={`flex flex-col items-center justify-center gap-3 text-center ${compact ? 'p-3' : 'h-full gap-4 p-6'}`}>
+        <div className="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+          <svg className="w-3.5 h-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
           </svg>
         </div>
         <div>
-          <p className="font-medium text-zinc-200 text-sm mb-1">Couldn&apos;t load the content tree</p>
-          <p className="text-xs text-zinc-500 max-w-md leading-relaxed">{state.error}</p>
+          <p className="font-medium text-zinc-200 text-xs mb-1">Couldn&apos;t load content</p>
+          <p className="text-[11px] text-zinc-500 leading-relaxed">{state.error}</p>
         </div>
         <button
           onClick={load}
-          className="mt-1 inline-flex items-center gap-1.5 text-xs text-zinc-300 hover:text-white border border-white/[0.08] hover:border-white/[0.18] px-4 py-2 rounded-lg transition-all"
+          className="inline-flex items-center gap-1.5 text-[11px] text-zinc-300 hover:text-white border border-white/[0.08] hover:border-white/[0.18] px-3 py-1.5 rounded-lg transition-all"
         >
           Retry
         </button>
@@ -159,26 +182,26 @@ export default function ContentTree() {
   const isEmpty = !data.tree || data.tree.length === 0;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className={`flex flex-col ${compact ? '' : 'h-full'}`}>
       {/* Header strip */}
-      <div className="flex items-center gap-3 px-4 py-2.5 border-b border-white/[0.06] shrink-0">
-        <div className="flex items-center gap-2 text-xs text-zinc-400">
-          <svg className="w-3.5 h-3.5 text-amber-400/80" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
-          </svg>
-          <span className="font-medium text-zinc-200">{data.workspace}</span>
-          <span className="text-zinc-600">workspace</span>
-        </div>
+      <div className={`flex items-center gap-2 ${compact ? 'px-1 py-1.5' : 'px-4 py-2.5 border-b border-white/[0.06]'} shrink-0`}>
+        <svg className="w-3.5 h-3.5 text-amber-400/80 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
+        </svg>
+        <span className={`font-medium text-zinc-200 truncate ${compact ? 'text-xs' : ''}`}>{data.workspace}</span>
+        {!compact && <span className="text-zinc-600">workspace</span>}
         <div className="flex-1" />
-        <span className="text-[11px] text-zinc-600">
-          via Sigma REST API · scoped to <span className="text-zinc-400">{data.sigmaEmail}</span>
-        </span>
+        {!compact && (
+          <span className="text-[11px] text-zinc-600">
+            via Sigma REST API · scoped to <span className="text-zinc-400">{data.sigmaEmail}</span>
+          </span>
+        )}
         <button
           onClick={load}
           title="Refresh"
-          className="text-zinc-500 hover:text-indigo-300 border border-white/[0.06] hover:border-indigo-500/30 rounded-md p-1.5 transition-all"
+          className="text-zinc-500 hover:text-indigo-300 border border-white/[0.06] hover:border-indigo-500/30 rounded-md p-1 transition-all shrink-0"
         >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
           </svg>
         </button>
@@ -186,31 +209,35 @@ export default function ContentTree() {
 
       {/* Body */}
       {isEmpty ? (
-        <div className="flex flex-col items-center justify-center flex-1 gap-4 p-6 text-center">
-          <div className="w-11 h-11 rounded-full bg-white/[0.03] border border-white/[0.08] flex items-center justify-center">
-            <svg className="w-5 h-5 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <div className={`flex flex-col items-center justify-center gap-3 text-center ${compact ? 'p-3' : 'flex-1 gap-4 p-6'}`}>
+          <div className={`${compact ? 'w-8 h-8' : 'w-11 h-11'} rounded-full bg-white/[0.03] border border-white/[0.08] flex items-center justify-center shrink-0`}>
+            <svg className={`text-zinc-500 ${compact ? 'w-3.5 h-3.5' : 'w-5 h-5'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
             </svg>
           </div>
           <div>
-            <p className="font-medium text-zinc-200 text-sm mb-1">No content visible in the {data.workspace} workspace</p>
-            <p className="text-xs text-zinc-500 max-w-md leading-relaxed">
+            <p className={`font-medium text-zinc-200 mb-1 ${compact ? 'text-xs' : 'text-sm'}`}>
+              No content visible in {data.workspace}
+            </p>
+            <p className={`text-zinc-500 leading-relaxed ${compact ? 'text-[11px]' : 'text-xs max-w-md'}`}>
               {data.member
-                ? `This embed user has no access to content in the ${data.workspace} workspace yet. Add workbooks to it in Sigma and grant this user (or their team) access — they'll appear here automatically.`
-                : `This embed user isn't provisioned in Sigma yet. Embed users are created lazily on their first embed, so open one of the embed pages first, then refresh.`}
+                ? `This embed user has no access here yet. Add workbooks to the ${data.workspace} workspace and grant this user (or their team) access.`
+                : `This embed user isn't provisioned in Sigma yet — open one of the embed pages first, then refresh.`}
             </p>
           </div>
-          {data.member && (
-            <p className="text-[10px] text-zinc-600 font-mono">
-              member: {data.member.email} · {data.member.userKind}/{data.member.memberType}
-            </p>
-          )}
         </div>
       ) : (
-        <div className="flex-1 overflow-auto p-2">
+        <div className={compact ? 'overflow-auto' : 'flex-1 overflow-auto p-2'}>
           <ul>
             {data.tree.map((node) => (
-              <TreeNode key={node.key} node={node} depth={0} />
+              <TreeNode
+                key={node.key}
+                node={node}
+                depth={0}
+                compact={compact}
+                selectedUrlId={selectedUrlId}
+                onSelectWorkbook={onSelectWorkbook}
+              />
             ))}
           </ul>
         </div>

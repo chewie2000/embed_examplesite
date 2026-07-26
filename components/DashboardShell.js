@@ -46,18 +46,6 @@ const NAV_ITEMS = [
       { mode: 'secured', label: 'Workbook - Secured filtered URL', span: 12 },
     ],
   },
-  {
-    // Read-only content browser — NOT an embed. Reads the EMBED workspace folder
-    // structure via the Sigma REST API, scoped to the logged-in embed user.
-    label: 'Content Browser (REST API)',
-    kind: 'tree',
-    icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v.776" />
-      </svg>
-    ),
-    embeds: [],
-  },
 ];
 
 const spanClass = {
@@ -78,10 +66,20 @@ export default function DashboardShell({ user, initialEmbedData }) {
   // undefined means "use server default from SESSION_LENGTH env var".
   const [sessionLength, setSessionLength] = useState(undefined);
   const [refreshKey, setRefreshKey] = useState(0);
+  // Workbook opened from the sidebar Content Browser tree (discovered via the
+  // Sigma REST API), rather than one of the pre-configured NAV_ITEMS examples.
+  // { urlId, name } | null
+  const [selectedTreeWorkbook, setSelectedTreeWorkbook] = useState(null);
 
   const activeItem = NAV_ITEMS[activeIndex] ?? NAV_ITEMS[0];
-  const isTree = activeItem.kind === 'tree';
-  const isMultiEmbed = activeItem.embeds.length > 1;
+  const isTreeView = !!selectedTreeWorkbook;
+  const isMultiEmbed = !isTreeView && activeItem.embeds.length > 1;
+  const pageLabel = isTreeView ? selectedTreeWorkbook.name : activeItem.label;
+  // JwtInspector keys jwts by `mode` — mirror SigmaEmbed's jwtKey for tree embeds.
+  const treeJwtMode = isTreeView ? `tree:${selectedTreeWorkbook.urlId}` : null;
+  const inspectorEmbeds = isTreeView
+    ? [{ mode: treeJwtMode, label: selectedTreeWorkbook.name }]
+    : activeItem.embeds;
 
   const handleJwt = useCallback((mode, jwt, embedUrl) => {
     setJwts((prev) => ({ ...prev, [mode]: { jwt, embedUrl } }));
@@ -89,9 +87,16 @@ export default function DashboardShell({ user, initialEmbedData }) {
 
   const handleNavChange = (index) => {
     setActiveIndex(index);
+    setSelectedTreeWorkbook(null);
     setJwts({});
     setHasNavigated(true);
   };
+
+  const handleSelectWorkbook = useCallback((node) => {
+    setSelectedTreeWorkbook({ urlId: node.urlId, name: node.name });
+    setJwts({});
+    setHasNavigated(true);
+  }, []);
 
   const handleRegenerate = useCallback((newLength) => {
     setSessionLength(newLength);
@@ -114,11 +119,11 @@ export default function DashboardShell({ user, initialEmbedData }) {
         <div className="h-5 w-px bg-white/10" />
 
         <div className="flex items-center gap-2 text-sm">
-          <span className="text-zinc-500">Analytics</span>
+          <span className="text-zinc-500">{isTreeView ? 'Content Browser' : 'Analytics'}</span>
           <svg className="w-3 h-3 text-zinc-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
-          <span className="text-zinc-300 font-medium">{activeItem.label}</span>
+          <span className="text-zinc-300 font-medium">{pageLabel}</span>
         </div>
 
         <div className="flex-1" />
@@ -158,32 +163,48 @@ export default function DashboardShell({ user, initialEmbedData }) {
       <div className="flex flex-1 overflow-hidden">
 
         {/* ── Sidebar ── */}
-        <aside className="w-52 shrink-0 border-r border-white/[0.06] bg-[#09090b] flex flex-col p-3 gap-0.5">
-          <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-widest mb-2 px-2 pt-1">
-            Analytics
-          </p>
-          {NAV_ITEMS.map((item, index) => {
-            const isActive = activeIndex === index;
-            return (
-              <button
-                key={item.label}
-                onClick={() => handleNavChange(index)}
-                className={`w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg text-sm transition-all ${
-                  isActive
-                    ? 'bg-indigo-500/10 text-indigo-300 border border-indigo-500/20'
-                    : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.04] border border-transparent'
-                }`}
-              >
-                <span className={isActive ? 'text-indigo-400' : 'text-zinc-600'}>
-                  {item.icon}
-                </span>
-                {item.label}
-                {item.embeds.length > 1 && (
-                  <span className="ml-auto text-[10px] text-zinc-600">{item.embeds.length}</span>
-                )}
-              </button>
-            );
-          })}
+        <aside className="w-64 shrink-0 border-r border-white/[0.06] bg-[#09090b] flex flex-col">
+          <div className="p-3 gap-0.5 flex flex-col shrink-0">
+            <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-widest mb-2 px-2 pt-1">
+              Analytics
+            </p>
+            {NAV_ITEMS.map((item, index) => {
+              const isActive = !isTreeView && activeIndex === index;
+              return (
+                <button
+                  key={item.label}
+                  onClick={() => handleNavChange(index)}
+                  className={`w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg text-sm transition-all ${
+                    isActive
+                      ? 'bg-indigo-500/10 text-indigo-300 border border-indigo-500/20'
+                      : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.04] border border-transparent'
+                  }`}
+                >
+                  <span className={isActive ? 'text-indigo-400' : 'text-zinc-600'}>
+                    {item.icon}
+                  </span>
+                  {item.label}
+                  {item.embeds.length > 1 && (
+                    <span className="ml-auto text-[10px] text-zinc-600">{item.embeds.length}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Content Browser — persistent tree, scoped to the logged-in embed user via the Sigma REST API */}
+          <div className="flex-1 min-h-0 flex flex-col border-t border-white/[0.06] pt-2">
+            <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-widest mb-1 px-3">
+              Content Browser
+            </p>
+            <div className="flex-1 min-h-0 overflow-y-auto px-1 pb-2">
+              <ContentTree
+                compact
+                selectedUrlId={selectedTreeWorkbook?.urlId}
+                onSelectWorkbook={handleSelectWorkbook}
+              />
+            </div>
+          </div>
         </aside>
 
         {/* ── Main ── */}
@@ -192,15 +213,29 @@ export default function DashboardShell({ user, initialEmbedData }) {
           {/* Page header */}
           <div className="flex items-center justify-between shrink-0">
             <div>
-              <h1 className="text-base font-semibold text-white">{activeItem.label}</h1>
+              <h1 className="text-base font-semibold text-white">{pageLabel}</h1>
               <p className="text-xs text-zinc-600 mt-0.5">
                 Signed in as <span className="text-zinc-500">{user.email}</span>
                 {isMultiEmbed && (
                   <span className="text-zinc-600"> · {activeItem.embeds.length} embeds</span>
                 )}
+                {isTreeView && (
+                  <span className="text-zinc-600"> · opened from Content Browser</span>
+                )}
               </p>
             </div>
             <div className="flex items-center gap-2">
+              {isTreeView && (
+                <button
+                  onClick={() => setSelectedTreeWorkbook(null)}
+                  className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-200 border border-white/[0.06] hover:border-white/[0.14] rounded-lg px-3 py-1.5 transition-all"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                  </svg>
+                  Back to {activeItem.label}
+                </button>
+              )}
               <div className="flex items-center gap-1.5 text-xs text-zinc-500 border border-white/[0.06] rounded-lg px-3 py-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 Live
@@ -208,10 +243,17 @@ export default function DashboardShell({ user, initialEmbedData }) {
             </div>
           </div>
 
-          {/* Content browser (REST API) — read-only folder tree */}
-          {isTree ? (
-            <div className="flex-1 min-h-0 rounded-xl border border-white/[0.06] overflow-hidden bg-[#0d0d10]">
-              <ContentTree />
+          {isTreeView ? (
+            /* Workbook opened from the sidebar Content Browser tree */
+            <div className="flex-1 min-h-0 rounded-xl border border-white/[0.06] overflow-hidden bg-[#0d0d10] flex flex-col">
+              <SigmaEmbed
+                key={selectedTreeWorkbook.urlId}
+                urlId={selectedTreeWorkbook.urlId}
+                label={selectedTreeWorkbook.name}
+                onJwt={handleJwt}
+                sessionLength={sessionLength}
+                refreshKey={refreshKey}
+              />
             </div>
           ) : (
             /* Embed grid */
@@ -247,7 +289,7 @@ export default function DashboardShell({ user, initialEmbedData }) {
 
       <JwtInspector
         jwts={jwts}
-        embeds={activeItem.embeds}
+        embeds={inspectorEmbeds}
         open={inspectorOpen}
         onClose={() => setInspectorOpen(false)}
         sessionLength={sessionLength}

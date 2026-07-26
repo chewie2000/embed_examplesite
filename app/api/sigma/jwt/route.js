@@ -8,6 +8,7 @@ export const revalidate = 0;
 
 /**
  * GET /api/sigma/jwt?mode=<optional_mode>
+ * GET /api/sigma/jwt?urlId=<sigma_file_urlId>  (content-browser tree click)
  *
  * Reads the authenticated user's Clerk publicMetadata to build the Sigma JWT claims.
  * Set metadata per user in the Clerk dashboard → Users → [user] → Metadata → Public.
@@ -35,14 +36,17 @@ export async function GET(request) {
 
   const { searchParams } = new URL(request.url);
   const mode = searchParams.get('mode') || '';
+  const urlId = searchParams.get('urlId') || undefined;
   const sessionLengthParam = searchParams.get('sessionLength');
   const sessionLength = sessionLengthParam ? parseInt(sessionLengthParam) : undefined;
 
   try {
-    const urlParams = resolveUrlParams(meta, mode);
+    // Content-browser (urlId) embeds are ad hoc — they don't carry any
+    // mode-specific URL params (those are keyed to the pre-configured examples).
+    const urlParams = urlId ? {} : resolveUrlParams(meta, mode);
 
     // Debug logging — visible in Vercel function logs
-    console.log('[/api/sigma/jwt] mode:', mode);
+    console.log('[/api/sigma/jwt] mode:', mode, '| urlId:', urlId || 'none');
     console.log('[/api/sigma/jwt] publicMetadata:', JSON.stringify(meta));
     console.log('[/api/sigma/jwt] resolved urlParams:', JSON.stringify(urlParams));
 
@@ -52,6 +56,7 @@ export async function GET(request) {
       teams,
       userAttributes,
       mode,
+      urlId,
       sessionLength,
       urlParams,
     });
