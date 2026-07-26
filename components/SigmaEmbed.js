@@ -33,9 +33,12 @@ export default function SigmaEmbed({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [feedback, setFeedback] = useState(null); // { type: 'success'|'error', text } | null
   const iframeRef = useRef(null);
-  // bookmarkId we most recently asked Sigma to delete, cleared once ondelete
-  // confirms it. Lets the watchdog below tell you if Sigma never responded at
-  // all, instead of the action silently appearing to do nothing.
+  // bookmarkId most recently sent for update/delete, cleared once the matching
+  // outbound confirmation arrives. Sigma can fail these internally (e.g. a
+  // stale/deleted bookmark id) without ever telling us — cross-origin, so its
+  // uncaught errors never reach us as a workbook:error event — so each
+  // watchdog below self-heals by clearing the reference if nothing arrives.
+  const pendingUpdateIdRef = useRef(null);
   const pendingDeleteIdRef = useRef(null);
 
   const getTargetOrigin = () => {
@@ -87,11 +90,31 @@ export default function SigmaEmbed({
       postToIframe({ type: 'workbook:bookmark:create', name, isDefault: false, isShared: false });
       return;
     }
+    const targetId = bookmarkId;
     // Always re-select right before updating, even if we believe it's already
     // selected — cheap and idempotent, and removes any doubt about whether an
     // earlier auto-select (on switching to Explore) actually landed in time.
-    postToIframe({ type: 'workbook:bookmark:select', bookmarkId });
-    setTimeout(() => postToIframe({ type: 'workbook:bookmark:update' }), BOOKMARK_ACTION_DELAY_MS);
+    postToIframe({ type: 'workbook:bookmark:select', bookmarkId: targetId });
+    pendingUpdateIdRef.current = targetId;
+    setTimeout(() => {
+      postToIframe({ type: 'workbook:bookmark:update' });
+      // Watchdog — Sigma can fail this internally (e.g. the bookmark no
+      // longer exists — an uncaught error inside the iframe, which never
+      // reaches us as workbook:error since it's cross-origin) without ever
+      // responding. Clear the stale reference so the next Save creates a
+      // fresh, valid bookmark instead of retrying against a dead id forever.
+      setTimeout(() => {
+        if (pendingUpdateIdRef.current === targetId) {
+          pendingUpdateIdRef.current = null;
+          setBookmarkId(null);
+          persistBookmark(null);
+          setFeedback({
+            type: 'error',
+            text: "Sigma didn't confirm the update — this bookmark reference looks stale and has been cleared. Click Save to create a new one.",
+          });
+        }
+      }, 4000);
+    }, BOOKMARK_ACTION_DELAY_MS);
   };
 
   const handleDeleteClick = () => {
@@ -101,21 +124,24 @@ export default function SigmaEmbed({
       return;
     }
     setConfirmingDelete(false);
+    const targetId = bookmarkId;
     // Same select-first pattern as update — the docs don't document a
     // "selected" prerequisite for delete, but it's consistent with the rest
     // of the bookmark API and cheap to do regardless.
-    postToIframe({ type: 'workbook:bookmark:select', bookmarkId });
-    pendingDeleteIdRef.current = bookmarkId;
+    postToIframe({ type: 'workbook:bookmark:select', bookmarkId: targetId });
+    pendingDeleteIdRef.current = targetId;
     setTimeout(() => {
-      postToIframe({ type: 'workbook:bookmark:delete', bookmarkId });
-      // Watchdog — if neither ondelete nor workbook:error ever arrives, say so
-      // explicitly rather than leaving it looking like nothing happened.
+      postToIframe({ type: 'workbook:bookmark:delete', bookmarkId: targetId });
+      // Watchdog — same reasoning as the update path above: a broken
+      // reference can fail inside Sigma without ever telling us. Since the
+      // user's intent was to remove it anyway, treat "no confirmation" as
+      // good enough reason to forget it on our side and navigate back.
       setTimeout(() => {
-        if (pendingDeleteIdRef.current === bookmarkId) {
-          setFeedback({
-            type: 'error',
-            text: 'Sigma never responded to the delete request — open the browser devtools console for any workbook:error / postMessage logs.',
-          });
+        if (pendingDeleteIdRef.current === targetId) {
+          pendingDeleteIdRef.current = null;
+          setBookmarkId(null);
+          persistBookmark(null);
+          onBookmarkDeleted?.();
         }
       }, 4000);
     }, BOOKMARK_ACTION_DELAY_MS);
@@ -148,6 +174,7 @@ export default function SigmaEmbed({
         // rather than leaving the user sitting in an open-ended Explore session.
         setTimeout(() => sendWorkbookMode('view'), BOOKMARK_ACTION_DELAY_MS);
       } else if (data.type === 'workbook:bookmark:onupdate') {
+        pendingUpdateIdRef.current = null;
         setFeedback({ type: 'success', text: 'Bookmark updated.' });
         setTimeout(() => sendWorkbookMode('view'), BOOKMARK_ACTION_DELAY_MS);
       } else if (data.type === 'workbook:bookmark:ondelete') {
@@ -157,6 +184,7 @@ export default function SigmaEmbed({
         setFeedback({ type: 'success', text: 'Bookmark deleted.' });
         onBookmarkDeleted?.();
       } else if (data.type === 'workbook:error') {
+        pendingUpdateIdRef.current = null;
         pendingDeleteIdRef.current = null;
         const text = data.message || 'Something went wrong with that bookmark action.';
         setFeedback({ type: 'error', text: data.code ? `${text} (${data.code})` : text });
@@ -204,6 +232,8 @@ export default function SigmaEmbed({
     setBookmarkId(initialBookmarkId);
     setConfirmingDelete(false);
     setFeedback(null);
+    pendingUpdateIdRef.current = null;
+    pendingDeleteIdRef.current = null;
 
     async function fetchEmbedUrl() {
       try {
