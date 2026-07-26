@@ -12,6 +12,7 @@ export default function SigmaEmbed({ mode = '', label, onJwt, initialEmbedUrl, i
   const [loading, setLoading] = useState(!initialEmbedUrl);
   const [slowLoad, setSlowLoad] = useState(false);
   const [iframeLoaded, setIframeLoaded] = useState(false);
+  const [iframeSlow, setIframeSlow] = useState(false);
   const [iframeTimedOut, setIframeTimedOut] = useState(false);
   const [localRefreshKey, setLocalRefreshKey] = useState(0);
   const iframeRef = useRef(null);
@@ -69,9 +70,19 @@ export default function SigmaEmbed({ mode = '', label, onJwt, initialEmbedUrl, i
     return () => clearTimeout(timer);
   }, [embedUrl, iframeLoaded, localRefreshKey, refreshKey]);
 
+  // Sigma workbooks that haven't been viewed recently can take a while to "wake up"
+  // (compute + warehouse connection spin-up) on first load. Surface a reassuring
+  // message well before the hard timeout, so it doesn't look stuck.
+  useEffect(() => {
+    if (!embedUrl || iframeLoaded) { setIframeSlow(false); return; }
+    const timer = setTimeout(() => setIframeSlow(true), FETCH_SLOW_WARNING_MS);
+    return () => clearTimeout(timer);
+  }, [embedUrl, iframeLoaded, localRefreshKey, refreshKey]);
+
   const retry = () => {
     setIframeLoaded(false);
     setIframeTimedOut(false);
+    setIframeSlow(false);
     setLocalRefreshKey((k) => k + 1);
   };
 
@@ -157,6 +168,14 @@ export default function SigmaEmbed({ mode = '', label, onJwt, initialEmbedUrl, i
           <div className="flex flex-col items-center gap-3">
             <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
             <p className="text-xs text-zinc-500">Loading Sigma workbook…</p>
+            {iframeSlow && (
+              <div className="flex items-center gap-2 mt-1">
+                <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                <p className="text-xs text-amber-400/80 max-w-xs text-center leading-relaxed">
+                  First load after a while can take longer — Sigma is warming up the workbook.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}
