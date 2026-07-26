@@ -119,31 +119,32 @@ export default function SigmaEmbed({
       return;
     }
     const targetId = bookmarkId;
-    // Always re-select right before updating, even if we believe it's already
-    // selected — cheap and idempotent, and removes any doubt about whether an
-    // earlier auto-select (on switching to Explore) actually landed in time.
-    postToIframe({ type: 'workbook:bookmark:select', bookmarkId: targetId });
+    // Deliberately NOT re-selecting here. The bookmark is already selected by
+    // this point — via the :bookmark URL param on load, or via
+    // sendWorkbookMode's select-before-switch when entering Explore.
+    // Re-selecting right before update reloads the bookmark to its
+    // last-saved state, discarding the very explore-mode edits we're trying
+    // to save — that's exactly what caused Sigma's "Cannot update bookmark,
+    // no explore changes made" error.
     pendingUpdateIdRef.current = targetId;
+    postToIframe({ type: 'workbook:bookmark:update' });
+    // Watchdog — Sigma can fail this internally (e.g. the bookmark no
+    // longer exists — an uncaught error inside the iframe, which never
+    // reaches us as workbook:error since it's cross-origin) without ever
+    // responding. Clear the stale reference so the next Save creates a
+    // fresh, valid bookmark instead of retrying against a dead id forever.
     setTimeout(() => {
-      postToIframe({ type: 'workbook:bookmark:update' });
-      // Watchdog — Sigma can fail this internally (e.g. the bookmark no
-      // longer exists — an uncaught error inside the iframe, which never
-      // reaches us as workbook:error since it's cross-origin) without ever
-      // responding. Clear the stale reference so the next Save creates a
-      // fresh, valid bookmark instead of retrying against a dead id forever.
-      setTimeout(() => {
-        if (pendingUpdateIdRef.current === targetId) {
-          pendingUpdateIdRef.current = null;
-          setSaving(false);
-          setBookmarkId(null);
-          persistBookmark(null).then(() => onBookmarkChange?.());
-          setFeedback({
-            type: 'error',
-            text: "Sigma didn't confirm the update — this bookmark reference looks stale and has been cleared. Click Save to create a new one.",
-          });
-        }
-      }, 4000);
-    }, BOOKMARK_ACTION_DELAY_MS);
+      if (pendingUpdateIdRef.current === targetId) {
+        pendingUpdateIdRef.current = null;
+        setSaving(false);
+        setBookmarkId(null);
+        persistBookmark(null).then(() => onBookmarkChange?.());
+        setFeedback({
+          type: 'error',
+          text: "Sigma didn't confirm the update — this bookmark reference looks stale and has been cleared. Click Save to create a new one.",
+        });
+      }
+    }, 4000);
   };
 
   const handleDeleteClick = () => {
@@ -155,26 +156,23 @@ export default function SigmaEmbed({
     setConfirmingDelete(false);
     setDeleting(true);
     const targetId = bookmarkId;
-    // Same select-first pattern as update — the docs don't document a
-    // "selected" prerequisite for delete, but it's consistent with the rest
-    // of the bookmark API and cheap to do regardless.
-    postToIframe({ type: 'workbook:bookmark:select', bookmarkId: targetId });
+    // No select needed — delete only requires the bookmarkId itself, no
+    // "selected" prerequisite per Sigma's docs, and re-selecting here carries
+    // the same risk of disturbing state for no benefit (see handleSave).
     pendingDeleteIdRef.current = targetId;
+    postToIframe({ type: 'workbook:bookmark:delete', bookmarkId: targetId });
+    // Watchdog — same reasoning as the update path above: a broken
+    // reference can fail inside Sigma without ever telling us. Since the
+    // user's intent was to remove it anyway, treat "no confirmation" as
+    // good enough reason to forget it on our side and navigate back.
     setTimeout(() => {
-      postToIframe({ type: 'workbook:bookmark:delete', bookmarkId: targetId });
-      // Watchdog — same reasoning as the update path above: a broken
-      // reference can fail inside Sigma without ever telling us. Since the
-      // user's intent was to remove it anyway, treat "no confirmation" as
-      // good enough reason to forget it on our side and navigate back.
-      setTimeout(() => {
-        if (pendingDeleteIdRef.current === targetId) {
-          pendingDeleteIdRef.current = null;
-          setDeleting(false);
-          setBookmarkId(null);
-          persistBookmark(null).then(() => onBookmarkDeleted?.());
-        }
-      }, 4000);
-    }, BOOKMARK_ACTION_DELAY_MS);
+      if (pendingDeleteIdRef.current === targetId) {
+        pendingDeleteIdRef.current = null;
+        setDeleting(false);
+        setBookmarkId(null);
+        persistBookmark(null).then(() => onBookmarkDeleted?.());
+      }
+    }, 4000);
   };
 
   // Outbound events from the iframe — bookmark confirmations and errors.
