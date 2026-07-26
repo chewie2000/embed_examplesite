@@ -175,7 +175,10 @@ export default function SigmaEmbed({
     // Watchdog — same reasoning as the update path above: a broken
     // reference can fail inside Sigma without ever telling us. Since the
     // user's intent was to remove it anyway, treat "no confirmation" as
-    // good enough reason to forget it on our side and navigate back.
+    // good enough reason to forget it on our side and navigate back. Kept
+    // short (unlike update/create) — firing early here is harmless, since it
+    // just treats "no confirmation yet" as "gone", matching the user's
+    // actual intent regardless.
     setTimeout(() => {
       if (pendingDeleteIdRef.current === targetId) {
         pendingDeleteIdRef.current = null;
@@ -183,7 +186,7 @@ export default function SigmaEmbed({
         setBookmarkId(null);
         persistBookmark(null).then(() => onBookmarkDeleted?.());
       }
-    }, 10000);
+    }, 3000);
   };
 
   // Outbound events from the iframe — bookmark confirmations and errors.
