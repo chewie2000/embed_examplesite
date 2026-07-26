@@ -254,12 +254,17 @@ export default function SigmaEmbed({
     return () => clearTimeout(timer);
   }, [feedback]);
 
-  // Note: opening via the tree's bookmark row (autoExplore) deliberately does
-  // NOT auto-switch to Explore on load — it lands in View like any other
-  // workbook. autoExplore still scopes Delete's visibility and gives this
-  // instance a distinct key in DashboardShell. Manually switching to Explore
-  // (below, via sendWorkbookMode) auto-selects this bookmarkId so the user
-  // continues editing THIS saved version rather than starting a blank one.
+  // Note: opening via the tree's bookmark row (autoExplore) loads the
+  // bookmarked content directly via Sigma's :bookmark embed URL param (see
+  // the fetch effect below and lib/sigma-embed.js) — no postMessage select
+  // race against the iframe's own initial render. It lands in View mode,
+  // already showing the bookmarked content (confirmed View can render it).
+  // autoExplore also scopes Delete's visibility and gives this instance a
+  // distinct key in DashboardShell. Manually switching to Explore (below, via
+  // sendWorkbookMode) re-selects this bookmarkId so continued edits target
+  // the right bookmark, and covers the OTHER case — a plain-workbook open
+  // where the user later wants to Explore an existing bookmark that wasn't
+  // loaded via the URL param.
 
   // Notify parent of server-side generated JWT on mount
   useEffect(() => {
@@ -292,8 +297,16 @@ export default function SigmaEmbed({
     async function fetchEmbedUrl() {
       try {
         const params = new URLSearchParams();
-        if (urlId) params.set('urlId', urlId);
-        else if (mode) params.set('mode', mode);
+        if (urlId) {
+          params.set('urlId', urlId);
+          // Opened via the tree's bookmark row — ask the server to load
+          // straight into the bookmarked version via Sigma's :bookmark URL
+          // param, rather than selecting it after the fact via postMessage
+          // (which raced against the iframe's own render).
+          if (autoExplore) params.set('wantBookmark', '1');
+        } else if (mode) {
+          params.set('mode', mode);
+        }
         if (sessionLength !== undefined) params.set('sessionLength', String(sessionLength));
         const qs = params.toString();
         const res = await fetch(`/api/sigma/jwt${qs ? `?${qs}` : ''}`);
@@ -308,7 +321,7 @@ export default function SigmaEmbed({
       }
     }
     fetchEmbedUrl();
-  }, [mode, urlId, sessionLength, refreshKey, localRefreshKey]);
+  }, [mode, urlId, autoExplore, sessionLength, refreshKey, localRefreshKey]);
 
   // Progressive loading warning during JWT fetch
   useEffect(() => {
