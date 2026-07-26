@@ -253,6 +253,7 @@ export default function DashboardShell({ user, initialEmbedData }) {
                 onJwt={handleJwt}
                 sessionLength={sessionLength}
                 refreshKey={refreshKey}
+                showModeToggle
               />
             </div>
           ) : (

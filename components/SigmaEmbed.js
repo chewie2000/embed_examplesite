@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 const IFRAME_LOAD_TIMEOUT_MS = 25_000;
 const FETCH_SLOW_WARNING_MS = 8_000;
 
-export default function SigmaEmbed({ mode = '', urlId, label, onJwt, initialEmbedUrl, initialJwt, sessionLength, refreshKey = 0 }) {
+export default function SigmaEmbed({ mode = '', urlId, label, onJwt, initialEmbedUrl, initialJwt, sessionLength, refreshKey = 0, showModeToggle = false }) {
   // Distinct key for ad hoc content-browser embeds (discovered urlId) vs the
   // pre-configured {mode}_SIGMA_BASE_URL examples — used for onJwt/inspector keying.
   const jwtKey = urlId ? `tree:${urlId}` : mode;
@@ -19,7 +19,27 @@ export default function SigmaEmbed({ mode = '', urlId, label, onJwt, initialEmbe
   const [iframeSlow, setIframeSlow] = useState(false);
   const [iframeTimedOut, setIframeTimedOut] = useState(false);
   const [localRefreshKey, setLocalRefreshKey] = useState(0);
+  const [workbookMode, setWorkbookMode] = useState('view');
   const iframeRef = useRef(null);
+
+  // Sends the Sigma Embed SDK's inbound `workbook:mode:update` postMessage event
+  // to switch the iframe's interaction mode. No-ops silently on Sigma's side if
+  // the embed user's account type lacks the required permission (e.g. "Full
+  // explore" for explore mode) — there's no error we can surface for that case.
+  // https://help.sigmacomputing.com/docs/inbound-event-reference
+  const sendWorkbookMode = (nextMode) => {
+    setWorkbookMode(nextMode);
+    if (!embedUrl) return;
+    try {
+      const targetOrigin = new URL(embedUrl).origin;
+      iframeRef.current?.contentWindow?.postMessage(
+        { type: 'workbook:mode:update', mode: nextMode },
+        targetOrigin
+      );
+    } catch {
+      // ignore — embedUrl not yet a valid absolute URL
+    }
+  };
 
   // Notify parent of server-side generated JWT on mount
   useEffect(() => {
@@ -39,6 +59,7 @@ export default function SigmaEmbed({ mode = '', urlId, label, onJwt, initialEmbe
     setSlowLoad(false);
     setIframeLoaded(false);
     setIframeTimedOut(false);
+    setWorkbookMode('view');
 
     async function fetchEmbedUrl() {
       try {
@@ -166,6 +187,27 @@ export default function SigmaEmbed({ mode = '', urlId, label, onJwt, initialEmbe
         allow="fullscreen"
         onLoad={() => setIframeLoaded(true)}
       />
+
+      {/* View/Explore mode toggle — sends the Embed SDK's workbook:mode:update
+          inbound event to the iframe. Only shown once loaded. */}
+      {showModeToggle && iframeLoaded && (
+        <div className="absolute top-3 right-3 z-10 flex items-center gap-0.5 bg-[#0d0d10]/95 backdrop-blur border border-white/[0.08] rounded-lg p-0.5 shadow-lg">
+          {['view', 'explore'].map((m) => (
+            <button
+              key={m}
+              onClick={() => sendWorkbookMode(m)}
+              title={m === 'explore' ? 'Requires the embed user\'s account type to allow Explore ("Full explore" permission)' : undefined}
+              className={`text-xs px-2.5 py-1 rounded-md capitalize transition-all ${
+                workbookMode === m
+                  ? 'bg-indigo-500/20 text-indigo-300'
+                  : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.04]'
+              }`}
+            >
+              {m}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Pre-load shimmer while iframe is still loading */}
       {!iframeLoaded && !iframeTimedOut && (
