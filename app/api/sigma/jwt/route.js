@@ -45,10 +45,8 @@ export async function GET(request) {
 
   try {
     // Content-browser (urlId) embeds are ad hoc — they don't carry any
-    // mode-specific URL params (those are keyed to the pre-configured
-    // examples), but always pin the menu to the top so it's easy to add
-    // pages while exploring.
-    const urlParams = urlId ? { ':menu_position': 'top' } : resolveUrlParams(meta, mode);
+    // mode-specific URL params (those are keyed to the pre-configured examples).
+    const urlParams = urlId ? {} : resolveUrlParams(meta, mode);
 
     // Look up the bookmark server-side (never trust a client-supplied id) —
     // only when the client explicitly asked for the bookmarked version
