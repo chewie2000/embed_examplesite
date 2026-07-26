@@ -33,6 +33,10 @@ export default function SigmaEmbed({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [feedback, setFeedback] = useState(null); // { type: 'success'|'error', text } | null
   const iframeRef = useRef(null);
+  // bookmarkId we most recently asked Sigma to delete, cleared once ondelete
+  // confirms it. Lets the watchdog below tell you if Sigma never responded at
+  // all, instead of the action silently appearing to do nothing.
+  const pendingDeleteIdRef = useRef(null);
 
   const getTargetOrigin = () => {
     try {
@@ -97,7 +101,24 @@ export default function SigmaEmbed({
       return;
     }
     setConfirmingDelete(false);
-    postToIframe({ type: 'workbook:bookmark:delete', bookmarkId });
+    // Same select-first pattern as update — the docs don't document a
+    // "selected" prerequisite for delete, but it's consistent with the rest
+    // of the bookmark API and cheap to do regardless.
+    postToIframe({ type: 'workbook:bookmark:select', bookmarkId });
+    pendingDeleteIdRef.current = bookmarkId;
+    setTimeout(() => {
+      postToIframe({ type: 'workbook:bookmark:delete', bookmarkId });
+      // Watchdog — if neither ondelete nor workbook:error ever arrives, say so
+      // explicitly rather than leaving it looking like nothing happened.
+      setTimeout(() => {
+        if (pendingDeleteIdRef.current === bookmarkId) {
+          setFeedback({
+            type: 'error',
+            text: 'Sigma never responded to the delete request — open the browser devtools console for any workbook:error / postMessage logs.',
+          });
+        }
+      }, 4000);
+    }, BOOKMARK_ACTION_DELAY_MS);
   };
 
   // Outbound events from the iframe — bookmark confirmations and errors.
@@ -109,6 +130,9 @@ export default function SigmaEmbed({
       if (!iframeRef.current || event.source !== iframeRef.current.contentWindow) return;
       const data = event.data;
       if (!data || typeof data !== 'object') return;
+      if (typeof data.type === 'string' && data.type.startsWith('workbook:')) {
+        console.log('[SigmaEmbed] outbound event:', data);
+      }
 
       if (data.type === 'workbook:bookmark:oncreate') {
         // Explicitly select the new bookmark rather than assume Sigma does —
@@ -123,11 +147,13 @@ export default function SigmaEmbed({
       } else if (data.type === 'workbook:bookmark:onupdate') {
         setFeedback({ type: 'success', text: 'Bookmark updated.' });
       } else if (data.type === 'workbook:bookmark:ondelete') {
+        pendingDeleteIdRef.current = null;
         setBookmarkId(null);
         persistBookmark(null);
         setFeedback({ type: 'success', text: 'Bookmark deleted.' });
         onBookmarkChange?.();
       } else if (data.type === 'workbook:error') {
+        pendingDeleteIdRef.current = null;
         const text = data.message || 'Something went wrong with that bookmark action.';
         setFeedback({ type: 'error', text: data.code ? `${text} (${data.code})` : text });
       }
