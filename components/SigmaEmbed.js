@@ -86,7 +86,7 @@ export default function SigmaEmbed({
 
   const handleSave = () => {
     if (!bookmarkId) {
-      const name = `${label || 'Exploration'} — ${new Date().toLocaleString()}`;
+      const name = `${label || 'Exploration'} - bookmark`;
       postToIframe({ type: 'workbook:bookmark:create', name, isDefault: false, isShared: false });
       return;
     }
