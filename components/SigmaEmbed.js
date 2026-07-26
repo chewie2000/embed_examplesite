@@ -177,27 +177,20 @@ export default function SigmaEmbed({ mode = '', urlId, label, onJwt, initialEmbe
   }
 
   return (
-    <div className="relative w-full h-full">
-      <iframe
-        ref={iframeRef}
-        key={localRefreshKey}
-        src={embedUrl}
-        className="w-full h-full border-0"
-        title={label || 'Sigma Analytics'}
-        allow="fullscreen"
-        onLoad={() => setIframeLoaded(true)}
-      />
-
-      {/* View/Explore mode toggle — sends the Embed SDK's workbook:mode:update
-          inbound event to the iframe. Only shown once loaded. */}
-      {showModeToggle && iframeLoaded && (
-        <div className="absolute top-3 right-3 z-10 flex items-center gap-0.5 bg-[#0d0d10]/95 backdrop-blur border border-white/[0.08] rounded-lg p-0.5 shadow-lg">
+    <div className="flex flex-col w-full h-full">
+      {/* View/Explore mode toggle — its own strip above the iframe, so it can
+          never sit on top of embedded content (workbooks vary in what they
+          render near the top of the page). Sends the Embed SDK's
+          workbook:mode:update inbound event to the iframe. */}
+      {showModeToggle && (
+        <div className="shrink-0 flex items-center justify-end gap-0.5 px-2 py-1.5 border-b border-white/[0.06] bg-[#0d0d10]">
           {['view', 'explore'].map((m) => (
             <button
               key={m}
               onClick={() => sendWorkbookMode(m)}
+              disabled={!iframeLoaded}
               title={m === 'explore' ? 'Requires the embed user\'s account type to allow Explore ("Full explore" permission)' : undefined}
-              className={`text-xs px-2.5 py-1 rounded-md capitalize transition-all ${
+              className={`text-xs px-2.5 py-1 rounded-md capitalize transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
                 workbookMode === m
                   ? 'bg-indigo-500/20 text-indigo-300'
                   : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.04]'
@@ -209,50 +202,62 @@ export default function SigmaEmbed({ mode = '', urlId, label, onJwt, initialEmbe
         </div>
       )}
 
-      {/* Pre-load shimmer while iframe is still loading */}
-      {!iframeLoaded && !iframeTimedOut && (
-        <div className="absolute inset-0 bg-[#0d0d10] flex items-center justify-center pointer-events-none">
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-            <p className="text-xs text-zinc-500">Loading Sigma workbook…</p>
-            {iframeSlow && (
-              <div className="flex items-center gap-2 mt-1">
-                <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                <p className="text-xs text-amber-400/80 max-w-xs text-center leading-relaxed">
-                  First load after a while can take longer — Sigma is warming up the workbook.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      <div className="relative flex-1 min-h-0">
+        <iframe
+          ref={iframeRef}
+          key={localRefreshKey}
+          src={embedUrl}
+          className="w-full h-full border-0"
+          title={label || 'Sigma Analytics'}
+          allow="fullscreen"
+          onLoad={() => setIframeLoaded(true)}
+        />
 
-      {/* Timeout overlay — covers Chrome's native error page */}
-      {iframeTimedOut && (
-        <div className="absolute inset-0 bg-[#0d0d10] flex flex-col items-center justify-center gap-4 p-8 text-center">
-          <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-            <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+        {/* Pre-load shimmer while iframe is still loading */}
+        {!iframeLoaded && !iframeTimedOut && (
+          <div className="absolute inset-0 bg-[#0d0d10] flex items-center justify-center pointer-events-none">
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+              <p className="text-xs text-zinc-500">Loading Sigma workbook…</p>
+              {iframeSlow && (
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  <p className="text-xs text-amber-400/80 max-w-xs text-center leading-relaxed">
+                    First load after a while can take longer — Sigma is warming up the workbook.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
-          <div>
-            <p className="font-medium text-zinc-200 text-sm mb-1">Sigma is taking too long to respond</p>
-            <p className="text-xs text-zinc-500 max-w-sm leading-relaxed">
-              The workbook didn't load within {IFRAME_LOAD_TIMEOUT_MS / 1000} seconds. This sometimes happens on first load — Sigma may need to warm up.
-            </p>
+        )}
+
+        {/* Timeout overlay — covers Chrome's native error page */}
+        {iframeTimedOut && (
+          <div className="absolute inset-0 bg-[#0d0d10] flex flex-col items-center justify-center gap-4 p-8 text-center">
+            <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+              <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <p className="font-medium text-zinc-200 text-sm mb-1">Sigma is taking too long to respond</p>
+              <p className="text-xs text-zinc-500 max-w-sm leading-relaxed">
+                The workbook didn't load within {IFRAME_LOAD_TIMEOUT_MS / 1000} seconds. This sometimes happens on first load — Sigma may need to warm up.
+              </p>
+            </div>
+            <button
+              onClick={retry}
+              className="inline-flex items-center gap-1.5 text-sm text-white bg-indigo-600 hover:bg-indigo-500 px-5 py-2.5 rounded-lg font-medium transition-colors shadow-lg shadow-indigo-500/20"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+              </svg>
+              Retry
+            </button>
+            <p className="text-[10px] text-zinc-600">A fresh JWT will be issued.</p>
           </div>
-          <button
-            onClick={retry}
-            className="inline-flex items-center gap-1.5 text-sm text-white bg-indigo-600 hover:bg-indigo-500 px-5 py-2.5 rounded-lg font-medium transition-colors shadow-lg shadow-indigo-500/20"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
-            </svg>
-            Retry
-          </button>
-          <p className="text-[10px] text-zinc-600">A fresh JWT will be issued.</p>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
