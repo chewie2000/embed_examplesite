@@ -108,14 +108,17 @@ export default function SigmaEmbed({
       postToIframe({ type: 'workbook:bookmark:create', name, isDefault: false, isShared: false });
       pendingCreateRef.current = true;
       // Watchdog — if Sigma never confirms the create at all, don't leave the
-      // button stuck showing "Saving…" forever.
+      // button stuck showing "Saving…" forever. Widened to 10s (see the
+      // update watchdog below) — confirmations can genuinely take longer
+      // than 4s, and firing early produces a false "didn't confirm" error
+      // even when the create actually succeeds moments later.
       setTimeout(() => {
         if (pendingCreateRef.current) {
           pendingCreateRef.current = false;
           setSaving(false);
           setFeedback({ type: 'error', text: "Sigma didn't confirm the save — check the browser console for details, then try again." });
         }
-      }, 4000);
+      }, 10000);
       return;
     }
     const targetId = bookmarkId;
@@ -137,6 +140,12 @@ export default function SigmaEmbed({
     // path, so auto-clearing here was destroying valid bookmarks on ordinary,
     // recoverable failures. Only report it; never destroy user data on a
     // mere absence of confirmation.
+    //
+    // Confirmed the update itself can genuinely succeed while still taking
+    // longer than 4s for onupdate to arrive — that was firing this "didn't
+    // confirm" message as a false negative. Widened to 10s; the onupdate
+    // handler isn't gated on this ref anyway, so a late confirmation still
+    // correctly overwrites this message with success once it arrives.
     setTimeout(() => {
       if (pendingUpdateIdRef.current === targetId) {
         pendingUpdateIdRef.current = null;
@@ -146,7 +155,7 @@ export default function SigmaEmbed({
           text: "Sigma didn't confirm the update. Your bookmark hasn't been changed — check the browser console for details, then try again.",
         });
       }
-    }, 4000);
+    }, 10000);
   };
 
   const handleDeleteClick = () => {
@@ -174,7 +183,7 @@ export default function SigmaEmbed({
         setBookmarkId(null);
         persistBookmark(null).then(() => onBookmarkDeleted?.());
       }
-    }, 4000);
+    }, 10000);
   };
 
   // Outbound events from the iframe — bookmark confirmations and errors.
