@@ -128,20 +128,22 @@ export default function SigmaEmbed({
     // no explore changes made" error.
     pendingUpdateIdRef.current = targetId;
     postToIframe({ type: 'workbook:bookmark:update' });
-    // Watchdog — Sigma can fail this internally (e.g. the bookmark no
-    // longer exists — an uncaught error inside the iframe, which never
-    // reaches us as workbook:error since it's cross-origin) without ever
-    // responding. Clear the stale reference so the next Save creates a
-    // fresh, valid bookmark instead of retrying against a dead id forever.
+    // Watchdog — informational only. We originally auto-cleared the
+    // bookmark reference here, on the theory that "no response" meant a
+    // stale/deleted id (an uncaught error inside the iframe that never
+    // reaches us as workbook:error, since it's cross-origin). But Sigma often
+    // DOES send a real workbook:error for perfectly recoverable reasons
+    // (e.g. "no explore changes made") — those also hit this same timeout
+    // path, so auto-clearing here was destroying valid bookmarks on ordinary,
+    // recoverable failures. Only report it; never destroy user data on a
+    // mere absence of confirmation.
     setTimeout(() => {
       if (pendingUpdateIdRef.current === targetId) {
         pendingUpdateIdRef.current = null;
         setSaving(false);
-        setBookmarkId(null);
-        persistBookmark(null).then(() => onBookmarkChange?.());
         setFeedback({
           type: 'error',
-          text: "Sigma didn't confirm the update — this bookmark reference looks stale and has been cleared. Click Save to create a new one.",
+          text: "Sigma didn't confirm the update. Your bookmark hasn't been changed — check the browser console for details, then try again.",
         });
       }
     }, 4000);
