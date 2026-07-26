@@ -67,14 +67,17 @@ export default function SigmaEmbed({
   // explore" for explore mode) — there's no error we can surface for that case.
   // https://help.sigmacomputing.com/docs/inbound-event-reference
   const sendWorkbookMode = (nextMode) => {
+    // Entering Explore with an existing bookmark: select it FIRST (select has
+    // no documented prerequisite, unlike update) so the mode switch renders
+    // straight into the bookmarked state in one transition. The previous
+    // order — switch mode, then select ~700ms later — rendered the published
+    // version first and had to re-render once the delayed select landed,
+    // which only painted correctly after extra View/Explore toggling.
+    if (nextMode === 'explore' && bookmarkId) {
+      postToIframe({ type: 'workbook:bookmark:select', bookmarkId });
+    }
     setWorkbookMode(nextMode);
     postToIframe({ type: 'workbook:mode:update', mode: nextMode });
-    // Entering Explore with an existing bookmark: auto-select it so Save
-    // always has something to update, rather than erroring on first click.
-    // Delayed — see BOOKMARK_ACTION_DELAY_MS.
-    if (nextMode === 'explore' && bookmarkId) {
-      setTimeout(() => postToIframe({ type: 'workbook:bookmark:select', bookmarkId }), BOOKMARK_ACTION_DELAY_MS);
-    }
   };
 
   const persistBookmark = async (entry) => {
