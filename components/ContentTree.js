@@ -183,13 +183,18 @@ export default function ContentTree({ compact = false, selectedUrlId, onSelectWo
 
   return (
     <div className={`flex flex-col ${compact ? '' : 'h-full'}`}>
-      {/* Header strip */}
-      <div className={`flex items-center gap-2 ${compact ? 'px-1 py-1.5' : 'px-4 py-2.5 border-b border-white/[0.06]'} shrink-0`}>
-        <svg className="w-3.5 h-3.5 text-amber-400/80 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
-        </svg>
-        <span className={`font-medium text-zinc-200 truncate ${compact ? 'text-xs' : ''}`}>{data.workspace}</span>
-        {!compact && <span className="text-zinc-600">workspace</span>}
+      {/* Header strip — in compact mode the workspace name is the tree's own
+          collapsible root node below, so we don't repeat it here. */}
+      <div className={`flex items-center gap-2 ${compact ? 'px-1 py-1' : 'px-4 py-2.5 border-b border-white/[0.06]'} shrink-0`}>
+        {!compact && (
+          <>
+            <svg className="w-3.5 h-3.5 text-amber-400/80 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
+            </svg>
+            <span className="font-medium text-zinc-200 truncate">{data.workspace}</span>
+            <span className="text-zinc-600">workspace</span>
+          </>
+        )}
         <div className="flex-1" />
         {!compact && (
           <span className="text-[11px] text-zinc-600">
@@ -229,16 +234,21 @@ export default function ContentTree({ compact = false, selectedUrlId, onSelectWo
       ) : (
         <div className={compact ? 'overflow-auto' : 'flex-1 overflow-auto p-2'}>
           <ul>
-            {data.tree.map((node) => (
-              <TreeNode
-                key={node.key}
-                node={node}
-                depth={0}
-                compact={compact}
-                selectedUrlId={selectedUrlId}
-                onSelectWorkbook={onSelectWorkbook}
-              />
-            ))}
+            {/* Single collapsible root — rolls the whole tree up/down from the
+                workspace itself, in addition to each sub-folder's own toggle. */}
+            <TreeNode
+              key="__root__"
+              node={{
+                key: '__root__',
+                name: data.workspace,
+                type: 'folder',
+                children: data.tree,
+              }}
+              depth={0}
+              compact={compact}
+              selectedUrlId={selectedUrlId}
+              onSelectWorkbook={onSelectWorkbook}
+            />
           </ul>
         </div>
       )}
