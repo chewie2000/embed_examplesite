@@ -83,6 +83,9 @@ Browser
 | `app/api/auth/login/route.js` | Validates credentials, writes encrypted session cookie |
 | `app/api/sigma/jwt/route.js` | Verifies session, calls `sigma-embed.js`, returns signed URL |
 | `lib/sigma-embed.js` | Builds JWT payload and signs embed URL (HMAC-SHA256 via `jose`) |
+| `lib/sigma-api.js` | Sigma **REST API** helper — OAuth token exchange + builds the embed user's EMBED-workspace tree (distinct from embed JWT signing) |
+| `app/api/sigma/tree/route.js` | Clerk-authed — returns the logged-in embed user's accessible EMBED tree as JSON |
+| `components/ContentTree.js` | Renders the read-only folder/workbook tree from `/api/sigma/tree` |
 | `lib/session.js` | Session creation and verification (encrypted cookie, 8hr expiry) |
 | `components/DashboardShell.js` | Nav + sidebar + embed container — **NAV_ITEMS is the multi-embed config** |
 | `components/SigmaEmbed.js` | Fetches JWT and renders `<iframe>` |
@@ -105,6 +108,14 @@ This is the most common task. Three steps only:
 3. Push — Vercel picks it up automatically.
 
 The `mode` string (lowercase) maps to `{MODE_UPPERCASE}_SIGMA_BASE_URL`. No other code changes needed.
+
+### Content Browser (REST API) section
+
+A third kind of nav item (`kind: 'tree'`) renders `ContentTree` instead of an embed. It calls the Sigma **REST API** (not embed JWT signing) to list the `EMBED` workspace folder/workbook structure, filtered to what the logged-in embed user can access via `GET /v2/members/{memberId}/files`.
+
+- REST API auth is a **separate** OAuth token exchange (`POST /v2/auth/token`) — see `lib/sigma-api.js`. Needs `SIGMA_API_BASE_URL` (the region-specific API host) and prefers `SIGMA_API_CLIENT_ID/SECRET`, falling back to the embed `SIGMA_CLIENT_ID/SECRET`.
+- The embed user identity is the same `sigmaEmail` used by the JWT route (Clerk `publicMetadata.sigmaEmail`).
+- Embed users are provisioned lazily — the tree shows an empty/"not provisioned" state until the user has embedded once **and** has been granted access to content in the `EMBED` workspace.
 
 ### Environment variables
 

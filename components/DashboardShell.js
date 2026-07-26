@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { UserButton } from '@clerk/nextjs';
 import Link from 'next/link';
 import SigmaEmbed from './SigmaEmbed';
+import ContentTree from './ContentTree';
 import JwtInspector from './JwtInspector';
 import ExpiryBadge from './ExpiryBadge';
 
@@ -45,6 +46,18 @@ const NAV_ITEMS = [
       { mode: 'secured', label: 'Workbook - Secured filtered URL', span: 12 },
     ],
   },
+  {
+    // Read-only content browser — NOT an embed. Reads the EMBED workspace folder
+    // structure via the Sigma REST API, scoped to the logged-in embed user.
+    label: 'Content Browser (REST API)',
+    kind: 'tree',
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v.776" />
+      </svg>
+    ),
+    embeds: [],
+  },
 ];
 
 const spanClass = {
@@ -67,6 +80,7 @@ export default function DashboardShell({ user, initialEmbedData }) {
   const [refreshKey, setRefreshKey] = useState(0);
 
   const activeItem = NAV_ITEMS[activeIndex] ?? NAV_ITEMS[0];
+  const isTree = activeItem.kind === 'tree';
   const isMultiEmbed = activeItem.embeds.length > 1;
 
   const handleJwt = useCallback((mode, jwt, embedUrl) => {
@@ -194,32 +208,39 @@ export default function DashboardShell({ user, initialEmbedData }) {
             </div>
           </div>
 
-          {/* Embed grid */}
-          <div className="grid grid-cols-12 gap-3 flex-1 min-h-0">
-            {activeItem.embeds.map((embed) => (
-              <div
-                key={embed.mode}
-                className={`${spanClass[embed.span] ?? 'col-span-12'} rounded-xl border border-white/[0.06] overflow-hidden bg-[#0d0d10] flex flex-col min-h-0`}
-              >
-                {isMultiEmbed && (
-                  <div className="px-4 py-2 border-b border-white/[0.04] shrink-0">
-                    <p className="text-[11px] font-medium text-zinc-500">{embed.label}</p>
+          {/* Content browser (REST API) — read-only folder tree */}
+          {isTree ? (
+            <div className="flex-1 min-h-0 rounded-xl border border-white/[0.06] overflow-hidden bg-[#0d0d10]">
+              <ContentTree />
+            </div>
+          ) : (
+            /* Embed grid */
+            <div className="grid grid-cols-12 gap-3 flex-1 min-h-0">
+              {activeItem.embeds.map((embed) => (
+                <div
+                  key={embed.mode}
+                  className={`${spanClass[embed.span] ?? 'col-span-12'} rounded-xl border border-white/[0.06] overflow-hidden bg-[#0d0d10] flex flex-col min-h-0`}
+                >
+                  {isMultiEmbed && (
+                    <div className="px-4 py-2 border-b border-white/[0.04] shrink-0">
+                      <p className="text-[11px] font-medium text-zinc-500">{embed.label}</p>
+                    </div>
+                  )}
+                  <div className="flex-1 min-h-0">
+                    <SigmaEmbed
+                    mode={embed.mode}
+                    label={embed.label}
+                    onJwt={handleJwt}
+                    initialEmbedUrl={!hasNavigated && embed.mode === '' ? initialEmbedData?.embedUrl : undefined}
+                    initialJwt={!hasNavigated && embed.mode === '' ? initialEmbedData?.jwt : undefined}
+                    sessionLength={sessionLength}
+                    refreshKey={refreshKey}
+                  />
                   </div>
-                )}
-                <div className="flex-1 min-h-0">
-                  <SigmaEmbed
-                  mode={embed.mode}
-                  label={embed.label}
-                  onJwt={handleJwt}
-                  initialEmbedUrl={!hasNavigated && embed.mode === '' ? initialEmbedData?.embedUrl : undefined}
-                  initialJwt={!hasNavigated && embed.mode === '' ? initialEmbedData?.jwt : undefined}
-                  sessionLength={sessionLength}
-                  refreshKey={refreshKey}
-                />
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
         </main>
       </div>
