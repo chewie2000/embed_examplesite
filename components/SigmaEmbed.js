@@ -133,7 +133,7 @@ export default function SigmaEmbed({
           pendingUpdateIdRef.current = null;
           setSaving(false);
           setBookmarkId(null);
-          persistBookmark(null);
+          persistBookmark(null).then(() => onBookmarkChange?.());
           setFeedback({
             type: 'error',
             text: "Sigma didn't confirm the update — this bookmark reference looks stale and has been cleared. Click Save to create a new one.",
@@ -168,8 +168,7 @@ export default function SigmaEmbed({
           pendingDeleteIdRef.current = null;
           setDeleting(false);
           setBookmarkId(null);
-          persistBookmark(null);
-          onBookmarkDeleted?.();
+          persistBookmark(null).then(() => onBookmarkDeleted?.());
         }
       }, 4000);
     }, BOOKMARK_ACTION_DELAY_MS);
@@ -197,14 +196,17 @@ export default function SigmaEmbed({
         // in Explore mode, so there's no pending mode switch to race against.
         postToIframe({ type: 'workbook:bookmark:select', bookmarkId: data.bookmarkId });
         setBookmarkId(data.bookmarkId);
+        // Wait for the Clerk write to actually complete before telling the
+        // tree to refetch — otherwise the refetch can land before the write
+        // does and read stale (pre-save) data, requiring a manual refresh.
         persistBookmark({ id: data.bookmarkId, name: data.bookmarkName }).then((persisted) => {
           setFeedback(
             persisted
               ? { type: 'success', text: `Bookmark "${data.bookmarkName}" saved.` }
               : { type: 'error', text: `Bookmark "${data.bookmarkName}" saved in Sigma, but failed to save to your profile — it may not appear in the tree yet.` }
           );
+          onBookmarkChange?.();
         });
-        onBookmarkChange?.();
         // Explore → Save → View: reinforces the save as a discrete action
         // rather than leaving the user sitting in an open-ended Explore session.
         setTimeout(() => sendWorkbookMode('view'), BOOKMARK_ACTION_DELAY_MS);
@@ -217,9 +219,16 @@ export default function SigmaEmbed({
         pendingDeleteIdRef.current = null;
         setDeleting(false);
         setBookmarkId(null);
-        persistBookmark(null);
-        setFeedback({ type: 'success', text: 'Bookmark deleted.' });
-        onBookmarkDeleted?.();
+        // Same ordering fix as create — wait for the write before navigating
+        // back/refetching the tree.
+        persistBookmark(null).then((persisted) => {
+          setFeedback(
+            persisted
+              ? { type: 'success', text: 'Bookmark deleted.' }
+              : { type: 'error', text: "Deleted in Sigma, but failed to update your profile — it may still show in the tree." }
+          );
+          onBookmarkDeleted?.();
+        });
       } else if (data.type === 'workbook:error') {
         pendingCreateRef.current = false;
         pendingUpdateIdRef.current = null;
@@ -242,13 +251,12 @@ export default function SigmaEmbed({
     return () => clearTimeout(timer);
   }, [feedback]);
 
-  // Opened via the tree's bookmark row: once loaded, switch to Explore and
-  // select the bookmark automatically so the user lands on their saved version.
-  useEffect(() => {
-    if (!iframeLoaded || !autoExplore) return;
-    sendWorkbookMode('explore');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [iframeLoaded]);
+  // Note: opening via the tree's bookmark row (autoExplore) deliberately does
+  // NOT auto-switch to Explore on load — it lands in View like any other
+  // workbook. autoExplore still scopes Delete's visibility and gives this
+  // instance a distinct key in DashboardShell. Manually switching to Explore
+  // (below, via sendWorkbookMode) auto-selects this bookmarkId so the user
+  // continues editing THIS saved version rather than starting a blank one.
 
   // Notify parent of server-side generated JWT on mount
   useEffect(() => {
