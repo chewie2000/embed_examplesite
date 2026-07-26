@@ -227,6 +227,18 @@ export default function SigmaEmbed({
         setSaving(false);
         setFeedback({ type: 'success', text: 'Bookmark updated.' });
         setTimeout(() => sendWorkbookMode('view'), BOOKMARK_ACTION_DELAY_MS);
+      } else if (data.type === 'workbook:exploreKey:onchange' && data.exploreKey === null && pendingUpdateIdRef.current) {
+        // Confirmed via live testing: this embed doesn't reliably fire
+        // workbook:bookmark:onupdate. Instead, exploreKey resets to null once
+        // the pending explore-mode changes have been consumed by a
+        // successful update — that's the real confirmation signal here.
+        // Scoped to only fire while we're actively awaiting an update, so it
+        // can't be misread as success in unrelated contexts (e.g. simply
+        // switching back to View resets exploreKey too).
+        pendingUpdateIdRef.current = null;
+        setSaving(false);
+        setFeedback({ type: 'success', text: 'Bookmark updated.' });
+        setTimeout(() => sendWorkbookMode('view'), BOOKMARK_ACTION_DELAY_MS);
       } else if (data.type === 'workbook:bookmark:ondelete') {
         pendingDeleteIdRef.current = null;
         setDeleting(false);
