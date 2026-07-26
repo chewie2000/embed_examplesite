@@ -66,10 +66,14 @@ export default function DashboardShell({ user, initialEmbedData }) {
   // undefined means "use server default from SESSION_LENGTH env var".
   const [sessionLength, setSessionLength] = useState(undefined);
   const [refreshKey, setRefreshKey] = useState(0);
-  // Workbook opened from the sidebar Content Browser tree (discovered via the
-  // Sigma REST API), rather than one of the pre-configured NAV_ITEMS examples.
-  // { urlId, name } | null
+  // Workbook (or bookmark) opened from the sidebar Content Browser tree
+  // (discovered via the Sigma REST API), rather than one of the
+  // pre-configured NAV_ITEMS examples.
+  // { urlId, name, bookmarkId?, autoExplore? } | null
   const [selectedTreeWorkbook, setSelectedTreeWorkbook] = useState(null);
+  // Bumped whenever a bookmark is created/deleted, so the sidebar tree
+  // refetches and shows/hides the bookmark row accordingly.
+  const [treeRefreshSignal, setTreeRefreshSignal] = useState(0);
 
   const activeItem = NAV_ITEMS[activeIndex] ?? NAV_ITEMS[0];
   const isTreeView = !!selectedTreeWorkbook;
@@ -93,9 +97,22 @@ export default function DashboardShell({ user, initialEmbedData }) {
   };
 
   const handleSelectWorkbook = useCallback((node) => {
-    setSelectedTreeWorkbook({ urlId: node.urlId, name: node.name });
+    // node.bookmarkId (if any) travels along so SigmaEmbed can auto-select the
+    // user's existing bookmark the moment they manually switch to Explore —
+    // it just doesn't auto-load/auto-explore on open like the bookmark row does.
+    setSelectedTreeWorkbook({ urlId: node.urlId, name: node.name, bookmarkId: node.bookmarkId ?? null, autoExplore: false });
     setJwts({});
     setHasNavigated(true);
+  }, []);
+
+  const handleSelectBookmark = useCallback((node) => {
+    setSelectedTreeWorkbook({ urlId: node.urlId, name: node.name, bookmarkId: node.bookmarkId, autoExplore: true });
+    setJwts({});
+    setHasNavigated(true);
+  }, []);
+
+  const handleBookmarkChange = useCallback(() => {
+    setTreeRefreshSignal((k) => k + 1);
   }, []);
 
   const handleRegenerate = useCallback((newLength) => {
@@ -200,8 +217,11 @@ export default function DashboardShell({ user, initialEmbedData }) {
             <div className="flex-1 min-h-0 overflow-y-auto px-1 pb-2">
               <ContentTree
                 compact
-                selectedUrlId={selectedTreeWorkbook?.urlId}
+                selectedUrlId={isTreeView && !selectedTreeWorkbook.autoExplore ? selectedTreeWorkbook.urlId : undefined}
+                selectedBookmarkId={isTreeView && selectedTreeWorkbook.autoExplore ? selectedTreeWorkbook.bookmarkId : undefined}
                 onSelectWorkbook={handleSelectWorkbook}
+                onSelectBookmark={handleSelectBookmark}
+                refreshSignal={treeRefreshSignal}
               />
             </div>
           </div>
@@ -247,13 +267,16 @@ export default function DashboardShell({ user, initialEmbedData }) {
             /* Workbook opened from the sidebar Content Browser tree */
             <div className="flex-1 min-h-0 rounded-xl border border-white/[0.06] overflow-hidden bg-[#0d0d10] flex flex-col">
               <SigmaEmbed
-                key={selectedTreeWorkbook.urlId}
+                key={`${selectedTreeWorkbook.urlId}:${selectedTreeWorkbook.autoExplore ? selectedTreeWorkbook.bookmarkId : 'plain'}`}
                 urlId={selectedTreeWorkbook.urlId}
                 label={selectedTreeWorkbook.name}
                 onJwt={handleJwt}
                 sessionLength={sessionLength}
                 refreshKey={refreshKey}
                 showModeToggle
+                initialBookmarkId={selectedTreeWorkbook.bookmarkId}
+                autoExplore={selectedTreeWorkbook.autoExplore}
+                onBookmarkChange={handleBookmarkChange}
               />
             </div>
           ) : (

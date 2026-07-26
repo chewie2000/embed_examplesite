@@ -1,6 +1,7 @@
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { buildEmbedUserTree } from '@/lib/sigma-api';
+import { getBookmarksMap, attachBookmarks } from '@/lib/bookmarks';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -28,6 +29,7 @@ export async function GET() {
 
   try {
     const result = await buildEmbedUserTree(sigmaEmail);
+    attachBookmarks(result.tree, getBookmarksMap(user));
 
     console.log('[/api/sigma/tree] sigmaEmail:', sigmaEmail);
     console.log('[/api/sigma/tree] workspace:', result.workspace, '| member found:', !!result.member, '| files:', result.fileCount);

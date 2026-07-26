@@ -29,6 +29,12 @@ function TypeIcon({ type, open }) {
           <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75" />
         </svg>
       );
+    case 'bookmark':
+      return (
+        <svg className={`${cls} text-amber-300`} fill="currentColor" viewBox="0 0 24 24" stroke="none">
+          <path d="M6.32 2.577a49.255 49.255 0 0111.36 0c1.497.174 2.57 1.46 2.57 2.93V21a.75.75 0 01-1.085.67L12 18.089l-7.165 3.583A.75.75 0 013.75 21V5.507c0-1.47 1.073-2.756 2.57-2.93z" />
+        </svg>
+      );
     default:
       return (
         <svg className={`${cls} text-zinc-500`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -43,38 +49,55 @@ const TYPE_LABEL = {
   workbook: 'workbook',
   report: 'report',
   dataset: 'dataset',
+  bookmark: 'your saved version',
 };
 
 // Only workbooks are directly embeddable in this demo's click-to-view flow.
+// Bookmarks are a separate click target (onSelectBookmark), handled below.
 const EMBEDDABLE_TYPES = new Set(['workbook']);
 
 // ── Recursive tree node ───────────────────────────────────────────────────────
-function TreeNode({ node, depth, compact, selectedUrlId, onSelectWorkbook }) {
+function TreeNode({ node, depth, compact, selectedUrlId, selectedBookmarkId, onSelectWorkbook, onSelectBookmark }) {
   const isFolder = node.type === 'folder';
+  const isBookmark = node.type === 'bookmark';
   const isEmbeddable = EMBEDDABLE_TYPES.has(node.type);
-  const isSelected = isEmbeddable && node.urlId === selectedUrlId;
-  const hasChildren = isFolder && Array.isArray(node.children) && node.children.length > 0;
+  const isClickable = isFolder || isEmbeddable || isBookmark;
+  const isSelected = isBookmark
+    ? node.bookmarkId === selectedBookmarkId
+    : isEmbeddable && node.urlId === selectedUrlId && !selectedBookmarkId;
+  // Non-folder nodes (workbooks) can also have children now — their bookmark.
+  const hasChildren = Array.isArray(node.children) && node.children.length > 0;
   const [open, setOpen] = useState(depth < 1); // top level expanded by default
 
-  const handleClick = () => {
+  const handleRowClick = () => {
     if (isFolder) setOpen((o) => !o);
+    else if (isBookmark) onSelectBookmark?.(node);
     else if (isEmbeddable) onSelectWorkbook?.(node);
+  };
+
+  // For non-folder rows with children (a workbook with its bookmark below it),
+  // the row click opens the workbook — expand/collapse needs its own target.
+  const handleChevronClick = (e) => {
+    if (isFolder) return; // folder row click already toggles
+    e.stopPropagation();
+    setOpen((o) => !o);
   };
 
   return (
     <li>
       <div
-        role={isFolder || isEmbeddable ? 'button' : undefined}
-        onClick={handleClick}
-        title={!isFolder && !isEmbeddable ? `${TYPE_LABEL[node.type] ?? node.type} — not embeddable in this demo` : undefined}
+        role={isClickable ? 'button' : undefined}
+        onClick={handleRowClick}
+        title={!isClickable ? `${TYPE_LABEL[node.type] ?? node.type} — not embeddable in this demo` : undefined}
         className={`group flex items-center gap-2 rounded-lg ${compact ? 'px-1.5 py-1' : 'px-2 py-1.5'} text-sm ${
-          isFolder || isEmbeddable ? 'cursor-pointer hover:bg-white/[0.04]' : 'cursor-default opacity-60'
+          isClickable ? 'cursor-pointer hover:bg-white/[0.04]' : 'cursor-default opacity-60'
         } ${isSelected ? 'bg-indigo-500/10 border border-indigo-500/20' : 'border border-transparent'}`}
         style={{ paddingLeft: `${depth * (compact ? 14 : 18) + (compact ? 4 : 8)}px` }}
       >
-        {isFolder ? (
+        {hasChildren ? (
           <svg
-            className={`w-3 h-3 shrink-0 text-zinc-600 transition-transform ${open ? 'rotate-90' : ''} ${hasChildren ? '' : 'opacity-0'}`}
+            onClick={handleChevronClick}
+            className={`w-3 h-3 shrink-0 text-zinc-600 transition-transform ${open ? 'rotate-90' : ''}`}
             fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -87,7 +110,7 @@ function TreeNode({ node, depth, compact, selectedUrlId, onSelectWorkbook }) {
 
         <span
           title={node.name}
-          className={`truncate ${isFolder ? 'text-zinc-200 font-medium' : isSelected ? 'text-indigo-300' : 'text-zinc-300'}`}
+          className={`truncate ${isFolder ? 'text-zinc-200 font-medium' : isSelected ? 'text-indigo-300' : isBookmark ? 'text-amber-200/90' : 'text-zinc-300'}`}
         >
           {node.name}
         </span>
@@ -111,7 +134,9 @@ function TreeNode({ node, depth, compact, selectedUrlId, onSelectWorkbook }) {
               depth={depth + 1}
               compact={compact}
               selectedUrlId={selectedUrlId}
+              selectedBookmarkId={selectedBookmarkId}
               onSelectWorkbook={onSelectWorkbook}
+              onSelectBookmark={onSelectBookmark}
             />
           ))}
         </ul>
@@ -123,10 +148,13 @@ function TreeNode({ node, depth, compact, selectedUrlId, onSelectWorkbook }) {
 // ── Container ─────────────────────────────────────────────────────────────────
 /**
  * @param {boolean} [compact]         Tighter sidebar rendering (vs. full-panel).
- * @param {string}  [selectedUrlId]   urlId of the currently embedded workbook, for highlighting.
+ * @param {string}  [selectedUrlId]   urlId of the currently embedded workbook (no bookmark active), for highlighting.
+ * @param {string}  [selectedBookmarkId] bookmarkId of the currently embedded bookmark, for highlighting.
  * @param {function} [onSelectWorkbook] Called with the clicked workbook node ({ urlId, name, ... }).
+ * @param {function} [onSelectBookmark] Called with the clicked bookmark node ({ urlId, bookmarkId, name }).
+ * @param {number}  [refreshSignal]   Bump this to force a refetch (e.g. after a bookmark is created/deleted).
  */
-export default function ContentTree({ compact = false, selectedUrlId, onSelectWorkbook }) {
+export default function ContentTree({ compact = false, selectedUrlId, selectedBookmarkId, onSelectWorkbook, onSelectBookmark, refreshSignal }) {
   const [state, setState] = useState({ status: 'loading' });
 
   const load = useCallback(async () => {
@@ -141,7 +169,7 @@ export default function ContentTree({ compact = false, selectedUrlId, onSelectWo
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); }, [load, refreshSignal]);
 
   // ── Loading ──
   if (state.status === 'loading') {
@@ -250,7 +278,9 @@ export default function ContentTree({ compact = false, selectedUrlId, onSelectWo
               depth={0}
               compact={compact}
               selectedUrlId={selectedUrlId}
+              selectedBookmarkId={selectedBookmarkId}
               onSelectWorkbook={onSelectWorkbook}
+              onSelectBookmark={onSelectBookmark}
             />
           </ul>
         </div>

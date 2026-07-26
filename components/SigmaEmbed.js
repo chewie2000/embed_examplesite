@@ -6,7 +6,10 @@ import { useState, useEffect, useRef } from 'react';
 const IFRAME_LOAD_TIMEOUT_MS = 25_000;
 const FETCH_SLOW_WARNING_MS = 8_000;
 
-export default function SigmaEmbed({ mode = '', urlId, label, onJwt, initialEmbedUrl, initialJwt, sessionLength, refreshKey = 0, showModeToggle = false }) {
+export default function SigmaEmbed({
+  mode = '', urlId, label, onJwt, initialEmbedUrl, initialJwt, sessionLength, refreshKey = 0,
+  showModeToggle = false, initialBookmarkId = null, autoExplore = false, onBookmarkChange,
+}) {
   // Distinct key for ad hoc content-browser embeds (discovered urlId) vs the
   // pre-configured {mode}_SIGMA_BASE_URL examples — used for onJwt/inspector keying.
   const jwtKey = urlId ? `tree:${urlId}` : mode;
@@ -20,7 +23,29 @@ export default function SigmaEmbed({ mode = '', urlId, label, onJwt, initialEmbe
   const [iframeTimedOut, setIframeTimedOut] = useState(false);
   const [localRefreshKey, setLocalRefreshKey] = useState(0);
   const [workbookMode, setWorkbookMode] = useState('view');
+  const [bookmarkId, setBookmarkId] = useState(initialBookmarkId);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [feedback, setFeedback] = useState(null); // { type: 'success'|'error', text } | null
   const iframeRef = useRef(null);
+  // Whether we've sent a bookmark:select for the current bookmarkId in THIS
+  // iframe session — workbook:bookmark:update only works on a "selected"
+  // bookmark, so this guards every path that needs to guarantee it's selected
+  // before calling update.
+  const bookmarkSelectedRef = useRef(false);
+
+  const getTargetOrigin = () => {
+    try {
+      return new URL(embedUrl).origin;
+    } catch {
+      return null;
+    }
+  };
+
+  const postToIframe = (payload) => {
+    const targetOrigin = getTargetOrigin();
+    if (!targetOrigin) return;
+    iframeRef.current?.contentWindow?.postMessage(payload, targetOrigin);
+  };
 
   // Sends the Sigma Embed SDK's inbound `workbook:mode:update` postMessage event
   // to switch the iframe's interaction mode. No-ops silently on Sigma's side if
@@ -29,17 +54,101 @@ export default function SigmaEmbed({ mode = '', urlId, label, onJwt, initialEmbe
   // https://help.sigmacomputing.com/docs/inbound-event-reference
   const sendWorkbookMode = (nextMode) => {
     setWorkbookMode(nextMode);
-    if (!embedUrl) return;
-    try {
-      const targetOrigin = new URL(embedUrl).origin;
-      iframeRef.current?.contentWindow?.postMessage(
-        { type: 'workbook:mode:update', mode: nextMode },
-        targetOrigin
-      );
-    } catch {
-      // ignore — embedUrl not yet a valid absolute URL
+    postToIframe({ type: 'workbook:mode:update', mode: nextMode });
+    // Entering Explore with an existing bookmark: auto-select it so Save
+    // always has something to update, rather than erroring on first click.
+    if (nextMode === 'explore' && bookmarkId && !bookmarkSelectedRef.current) {
+      postToIframe({ type: 'workbook:bookmark:select', bookmarkId });
+      bookmarkSelectedRef.current = true;
     }
   };
+
+  const persistBookmark = async (entry) => {
+    try {
+      await fetch('/api/bookmarks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ urlId, bookmarkId: entry?.id ?? null, name: entry?.name }),
+      });
+    } catch {
+      // best-effort — the Sigma-side bookmark still exists even if our
+      // mapping fails to persist; a page refresh's fresh GET will re-sync.
+    }
+  };
+
+  const handleSave = () => {
+    if (!bookmarkId) {
+      const name = `${label || 'Exploration'} — ${new Date().toLocaleString()}`;
+      postToIframe({ type: 'workbook:bookmark:create', name, isDefault: false, isShared: false });
+      return;
+    }
+    if (!bookmarkSelectedRef.current) {
+      postToIframe({ type: 'workbook:bookmark:select', bookmarkId });
+      bookmarkSelectedRef.current = true;
+    }
+    postToIframe({ type: 'workbook:bookmark:update' });
+  };
+
+  const handleDeleteClick = () => {
+    if (!confirmingDelete) {
+      setConfirmingDelete(true);
+      setTimeout(() => setConfirmingDelete(false), 4000);
+      return;
+    }
+    setConfirmingDelete(false);
+    postToIframe({ type: 'workbook:bookmark:delete', bookmarkId });
+  };
+
+  // Outbound events from the iframe — bookmark confirmations and errors.
+  // https://help.sigmacomputing.com/docs/outbound-event-reference
+  useEffect(() => {
+    function handleMessage(event) {
+      const targetOrigin = getTargetOrigin();
+      if (!targetOrigin || event.origin !== targetOrigin) return;
+      if (!iframeRef.current || event.source !== iframeRef.current.contentWindow) return;
+      const data = event.data;
+      if (!data || typeof data !== 'object') return;
+
+      if (data.type === 'workbook:bookmark:oncreate') {
+        // Explicitly select the new bookmark rather than assume Sigma does —
+        // guarantees the very next Save can call update, not fail on it.
+        postToIframe({ type: 'workbook:bookmark:select', bookmarkId: data.bookmarkId });
+        bookmarkSelectedRef.current = true;
+        setBookmarkId(data.bookmarkId);
+        persistBookmark({ id: data.bookmarkId, name: data.bookmarkName });
+        setFeedback({ type: 'success', text: `Bookmark "${data.bookmarkName}" saved.` });
+        onBookmarkChange?.();
+      } else if (data.type === 'workbook:bookmark:onupdate') {
+        setFeedback({ type: 'success', text: 'Bookmark updated.' });
+      } else if (data.type === 'workbook:bookmark:ondelete') {
+        bookmarkSelectedRef.current = false;
+        setBookmarkId(null);
+        persistBookmark(null);
+        setFeedback({ type: 'success', text: 'Bookmark deleted.' });
+        onBookmarkChange?.();
+      } else if (data.type === 'workbook:error') {
+        setFeedback({ type: 'error', text: data.message || 'Something went wrong with that bookmark action.' });
+      }
+    }
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [embedUrl, urlId]);
+
+  // Auto-dismiss feedback banner
+  useEffect(() => {
+    if (!feedback) return;
+    const timer = setTimeout(() => setFeedback(null), 5000);
+    return () => clearTimeout(timer);
+  }, [feedback]);
+
+  // Opened via the tree's bookmark row: once loaded, switch to Explore and
+  // select the bookmark automatically so the user lands on their saved version.
+  useEffect(() => {
+    if (!iframeLoaded || !autoExplore) return;
+    sendWorkbookMode('explore');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [iframeLoaded]);
 
   // Notify parent of server-side generated JWT on mount
   useEffect(() => {
@@ -60,6 +169,10 @@ export default function SigmaEmbed({ mode = '', urlId, label, onJwt, initialEmbe
     setIframeLoaded(false);
     setIframeTimedOut(false);
     setWorkbookMode('view');
+    setBookmarkId(initialBookmarkId);
+    setConfirmingDelete(false);
+    setFeedback(null);
+    bookmarkSelectedRef.current = false;
 
     async function fetchEmbedUrl() {
       try {
@@ -183,22 +296,62 @@ export default function SigmaEmbed({ mode = '', urlId, label, onJwt, initialEmbe
           render near the top of the page). Sends the Embed SDK's
           workbook:mode:update inbound event to the iframe. */}
       {showModeToggle && (
-        <div className="shrink-0 flex items-center justify-end gap-0.5 px-2 py-1.5 border-b border-white/[0.06] bg-[#0d0d10]">
-          {['view', 'explore'].map((m) => (
-            <button
-              key={m}
-              onClick={() => sendWorkbookMode(m)}
-              disabled={!iframeLoaded}
-              title={m === 'explore' ? 'Requires the embed user\'s account type to allow Explore ("Full explore" permission)' : undefined}
-              className={`text-xs px-2.5 py-1 rounded-md capitalize transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
-                workbookMode === m
-                  ? 'bg-indigo-500/20 text-indigo-300'
-                  : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.04]'
-              }`}
-            >
-              {m}
-            </button>
-          ))}
+        <div className="shrink-0 flex flex-col border-b border-white/[0.06] bg-[#0d0d10]">
+          <div className="flex items-center justify-between gap-2 px-2 py-1.5">
+            <div className="flex items-center gap-1.5">
+              {workbookMode === 'explore' && (
+                <button
+                  onClick={handleSave}
+                  disabled={!iframeLoaded}
+                  className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                  </svg>
+                  {bookmarkId ? 'Update bookmark' : 'Save as bookmark'}
+                </button>
+              )}
+              {bookmarkId && (
+                <button
+                  onClick={handleDeleteClick}
+                  disabled={!iframeLoaded}
+                  title="Delete your saved bookmark for this workbook"
+                  className={`text-xs px-2.5 py-1 rounded-md transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
+                    confirmingDelete
+                      ? 'bg-red-500/20 text-red-300'
+                      : 'text-zinc-500 hover:text-red-300 hover:bg-red-500/10'
+                  }`}
+                >
+                  {confirmingDelete ? 'Confirm delete?' : 'Delete bookmark'}
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-0.5">
+              {['view', 'explore'].map((m) => (
+                <button
+                  key={m}
+                  onClick={() => sendWorkbookMode(m)}
+                  disabled={!iframeLoaded}
+                  title={m === 'explore' ? 'Requires the embed user\'s account type to allow Explore ("Full explore" permission)' : undefined}
+                  className={`text-xs px-2.5 py-1 rounded-md capitalize transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
+                    workbookMode === m
+                      ? 'bg-indigo-500/20 text-indigo-300'
+                      : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.04]'
+                  }`}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {feedback && (
+            <div className={`flex items-center gap-1.5 px-2.5 pb-1.5 text-[11px] ${feedback.type === 'error' ? 'text-red-300' : 'text-emerald-300'}`}>
+              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${feedback.type === 'error' ? 'bg-red-400' : 'bg-emerald-400'}`} />
+              {feedback.text}
+            </div>
+          )}
         </div>
       )}
 
