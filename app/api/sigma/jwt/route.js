@@ -45,8 +45,11 @@ export async function GET(request) {
 
   try {
     // Content-browser (urlId) embeds are ad hoc — they don't carry any
-    // mode-specific URL params (those are keyed to the pre-configured examples).
-    const urlParams = urlId ? {} : resolveUrlParams(meta, mode);
+    // mode-specific URL params (those are keyed to the pre-configured
+    // examples). Menu stays hidden by default; :menu_position=top only takes
+    // visible effect once Explore is entered via the inbound mode:update
+    // action, making it easy to add pages while exploring.
+    const urlParams = urlId ? { ':hide_menu': 'true', ':menu_position': 'top' } : resolveUrlParams(meta, mode);
 
     // Look up the bookmark server-side (never trust a client-supplied id) —
     // only when the client explicitly asked for the bookmarked version
