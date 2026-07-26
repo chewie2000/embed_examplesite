@@ -5,6 +5,12 @@ import { useState, useEffect, useRef } from 'react';
 // Triggers our retry overlay before Chrome's ~30s ERR_TIMED_OUT page would render.
 const IFRAME_LOAD_TIMEOUT_MS = 25_000;
 const FETCH_SLOW_WARNING_MS = 8_000;
+// There's no confirmation event for workbook:mode:update itself, so bookmark
+// actions that depend on Explore mode already being active (select, and the
+// select-then-update pairing) wait this long after sending mode:update /
+// select before firing the next message — otherwise Sigma can silently drop
+// or reject them if they arrive before the mode switch has finished.
+const BOOKMARK_ACTION_DELAY_MS = 700;
 
 export default function SigmaEmbed({
   mode = '', urlId, label, onJwt, initialEmbedUrl, initialJwt, sessionLength, refreshKey = 0,
@@ -27,11 +33,6 @@ export default function SigmaEmbed({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [feedback, setFeedback] = useState(null); // { type: 'success'|'error', text } | null
   const iframeRef = useRef(null);
-  // Whether we've sent a bookmark:select for the current bookmarkId in THIS
-  // iframe session — workbook:bookmark:update only works on a "selected"
-  // bookmark, so this guards every path that needs to guarantee it's selected
-  // before calling update.
-  const bookmarkSelectedRef = useRef(false);
 
   const getTargetOrigin = () => {
     try {
@@ -57,9 +58,9 @@ export default function SigmaEmbed({
     postToIframe({ type: 'workbook:mode:update', mode: nextMode });
     // Entering Explore with an existing bookmark: auto-select it so Save
     // always has something to update, rather than erroring on first click.
-    if (nextMode === 'explore' && bookmarkId && !bookmarkSelectedRef.current) {
-      postToIframe({ type: 'workbook:bookmark:select', bookmarkId });
-      bookmarkSelectedRef.current = true;
+    // Delayed — see BOOKMARK_ACTION_DELAY_MS.
+    if (nextMode === 'explore' && bookmarkId) {
+      setTimeout(() => postToIframe({ type: 'workbook:bookmark:select', bookmarkId }), BOOKMARK_ACTION_DELAY_MS);
     }
   };
 
@@ -82,11 +83,11 @@ export default function SigmaEmbed({
       postToIframe({ type: 'workbook:bookmark:create', name, isDefault: false, isShared: false });
       return;
     }
-    if (!bookmarkSelectedRef.current) {
-      postToIframe({ type: 'workbook:bookmark:select', bookmarkId });
-      bookmarkSelectedRef.current = true;
-    }
-    postToIframe({ type: 'workbook:bookmark:update' });
+    // Always re-select right before updating, even if we believe it's already
+    // selected — cheap and idempotent, and removes any doubt about whether an
+    // earlier auto-select (on switching to Explore) actually landed in time.
+    postToIframe({ type: 'workbook:bookmark:select', bookmarkId });
+    setTimeout(() => postToIframe({ type: 'workbook:bookmark:update' }), BOOKMARK_ACTION_DELAY_MS);
   };
 
   const handleDeleteClick = () => {
@@ -111,9 +112,10 @@ export default function SigmaEmbed({
 
       if (data.type === 'workbook:bookmark:oncreate') {
         // Explicitly select the new bookmark rather than assume Sigma does —
-        // guarantees the very next Save can call update, not fail on it.
+        // guarantees the very next Save can call update, not fail on it. No
+        // delay needed here: creating a bookmark only happens while already
+        // in Explore mode, so there's no pending mode switch to race against.
         postToIframe({ type: 'workbook:bookmark:select', bookmarkId: data.bookmarkId });
-        bookmarkSelectedRef.current = true;
         setBookmarkId(data.bookmarkId);
         persistBookmark({ id: data.bookmarkId, name: data.bookmarkName });
         setFeedback({ type: 'success', text: `Bookmark "${data.bookmarkName}" saved.` });
@@ -121,13 +123,13 @@ export default function SigmaEmbed({
       } else if (data.type === 'workbook:bookmark:onupdate') {
         setFeedback({ type: 'success', text: 'Bookmark updated.' });
       } else if (data.type === 'workbook:bookmark:ondelete') {
-        bookmarkSelectedRef.current = false;
         setBookmarkId(null);
         persistBookmark(null);
         setFeedback({ type: 'success', text: 'Bookmark deleted.' });
         onBookmarkChange?.();
       } else if (data.type === 'workbook:error') {
-        setFeedback({ type: 'error', text: data.message || 'Something went wrong with that bookmark action.' });
+        const text = data.message || 'Something went wrong with that bookmark action.';
+        setFeedback({ type: 'error', text: data.code ? `${text} (${data.code})` : text });
       }
     }
     window.addEventListener('message', handleMessage);
@@ -172,7 +174,6 @@ export default function SigmaEmbed({
     setBookmarkId(initialBookmarkId);
     setConfirmingDelete(false);
     setFeedback(null);
-    bookmarkSelectedRef.current = false;
 
     async function fetchEmbedUrl() {
       try {
