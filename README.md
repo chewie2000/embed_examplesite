@@ -1,6 +1,6 @@
 # Embed Success — Sigma Embed Example Site
 
-A production-ready example of embedding [Sigma Computing](https://sigmacomputing.com) analytics into a modern SaaS application. Built with Next.js 14, Tailwind CSS, and JWT-based secure embedding.
+A production-ready example of embedding [Sigma Computing](https://sigmacomputing.com) analytics into a modern SaaS application. Built with Next.js, Tailwind CSS, Clerk auth, and JWT-based secure embedding.
 
 **Live site:** https://embedexamplesite.vercel.app
 
@@ -11,12 +11,15 @@ A production-ready example of embedding [Sigma Computing](https://sigmacomputing
 This site demonstrates how to embed Sigma workbooks inside a custom web application using Sigma's JWT embedding API. It includes:
 
 - A polished dark SaaS landing page
-- An authenticated login flow with session management
+- Clerk-authenticated login (email/password, social, or SSO)
 - A dashboard shell that loads Sigma content inside an iframe
 - Server-side JWT generation — the embed URL is signed fresh on every request
 - A multi-embed pattern so you can add new Sigma workbooks with minimal code
+- A **Content Browser** — a live sidebar tree, read via the Sigma REST API, scoped to exactly what the logged-in embed user can access
+- **Bookmarks** — embed users can Explore a workbook, save their own view as a bookmark, and return to it later, all driven by the Embed SDK's inbound/outbound events
+- A public, no-sign-on anonymous embed page (`/interested`)
 
-This is not a template or a starter kit — it's a working demonstration of a real embed architecture.
+This is not a template or a starter kit — it's a working demonstration of a real embed architecture, including the rough edges (timing races, event quirks) you actually hit integrating with Sigma's embed SDK and their real-world behavior.
 
 ---
 
@@ -26,11 +29,17 @@ This is not a template or a starter kit — it's a working demonstration of a re
 Browser
   │
   ├── GET /dashboard
-  │     └── Server verifies session cookie → renders DashboardShell
+  │     └── Clerk middleware verifies session → renders DashboardShell
   │
-  └── GET /api/sigma/jwt?mode=<mode>
-        └── Server verifies session → signs JWT with SIGMA_SECRET
-              └── Returns signed embed URL → iframe renders Sigma content
+  ├── GET /api/sigma/jwt?mode=<mode> | ?urlId=<urlId>&wantBookmark=1
+  │     └── Server verifies Clerk session → signs JWT with SIGMA_SECRET
+  │           └── Returns signed embed URL (+ :bookmark param if requested)
+  │                 → iframe renders Sigma content
+  │
+  └── GET /api/sigma/tree
+        └── Server reads the EMBED workspace via the Sigma REST API,
+              scoped to the logged-in user's Sigma member grants
+              → Content Browser sidebar tree
 ```
 
 **Why server-side JWT signing matters:** The Sigma embed secret never leaves the server. The browser only ever receives a signed, expiring URL — it cannot forge or extend its own access.
@@ -41,43 +50,143 @@ Browser
 
 | Layer | Technology |
 |---|---|
-| Framework | Next.js 14 (App Router) |
+| Framework | Next.js (App Router) |
+| Auth | Clerk (`@clerk/nextjs`) |
 | Styling | Tailwind CSS + Inter font |
 | JWT signing | `jose` (HMAC-SHA256) |
-| Session | Encrypted cookie (`jose`, 8hr expiry) |
+| Bookmark storage | Clerk `privateMetadata` (per user, no separate database) |
 | Hosting | Vercel (auto-deploys on push to `master`) |
 
 ---
 
 ## Environment variables
 
-Set these in Vercel (Settings → Environment Variables) or in `.env.local` for local development:
+Set these in Vercel (Settings → Environment Variables) or in `.env.local` for local development. See `.env.example` for the full annotated list. Key groups:
 
 ```env
-# Sigma embed credentials
-# Get these from: Sigma Admin → Developer Access → Embedding
+# Sigma embed credentials — Sigma Admin → Developer Access → Embedding
 SIGMA_CLIENT_ID=
 SIGMA_SECRET=
 
-# Default embed URL — the Sigma workbook/page to embed
-# Copy from Sigma: open a workbook → share → get embed URL (without ?:embed=true)
+# Default embed URL — the Sigma workbook/page to embed (without ?:embed=true)
 SIGMA_BASE_URL=
 
-# Add one per nav section. Mode name (uppercase) becomes the prefix.
-# Example: { label: 'Sales', mode: 'sales' } → SALES_SIGMA_BASE_URL
+# Content Browser (REST API) — reads the EMBED workspace tree.
+# The REST API host for your org's cloud/region — NOT the embed workbook URL.
+#   EU AWS:  https://api.eu.aws.sigmacomputing.com
+#   US AWS:  https://aws-api.sigmacomputing.com
+#   GCP:     https://api.sigmacomputing.com
+SIGMA_API_BASE_URL=
+# Optional: dedicated REST API OAuth client (falls back to SIGMA_CLIENT_ID/SECRET
+# above if the same Developer Access client is API-enabled).
+# SIGMA_API_CLIENT_ID=
+# SIGMA_API_SECRET=
+# Optional: workspace name to browse (default "EMBED")
+# EMBED_WORKSPACE_NAME=EMBED
+
+# Clerk — https://dashboard.clerk.com
+CLERK_SECRET_KEY=
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+
+# Add one per nav section in DashboardShell.js NAV_ITEMS.
+# Example: { mode: 'sales' } → SALES_SIGMA_BASE_URL
 # SALES_SIGMA_BASE_URL=
-# PROFIT_PLANNER_SIGMA_BASE_URL=
-# MARKETING_SIGMA_BASE_URL=
 
-# Session signing secret — generate with: node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
-SESSION_SECRET=
+# Anonymous embed (/interested page) — every visitor maps to one static Sigma user
+INTERESTED_SIGMA_BASE_URL=
+ANONYMOUS_SIGMA_SUB=anonymous@embedsuccess.com
+ANONYMOUS_SIGMA_ACCOUNT_TYPE=anon
 
-# Optional Sigma UI controls
+# Optional: embed session length in seconds (default 3600, max 2592000)
+# SESSION_LENGTH=3600
+
+# Optional Sigma UI controls (uncomment to enable)
 # hide_menu=true
 # hide_folder_navigation=true
 # disable_mobile_view=true
 # responsive_height=true
 # theme=
+# lng=
+```
+
+---
+
+## Content Browser & Bookmarks
+
+The **Content Browser** sidebar (below the two static nav examples) is a live folder/workbook tree, fetched from the Sigma REST API and scoped to exactly what the logged-in embed user can access — including access granted via team membership, since `GET /v2/members/{memberId}/files` resolves effective grants server-side. Clicking a workbook opens it via an ad hoc, `urlId`-based signed embed (`lib/sigma-embed.js`), independent of the `{MODE}_SIGMA_BASE_URL` env-var system used by the static nav examples.
+
+**Bookmarks** let an embed user save their own Explore-mode customization of a workbook and return to it later:
+
+- One bookmark per (Clerk user, workbook), stored in Clerk `privateMetadata` — no separate database.
+- Opening a bookmark loads it directly via Sigma's `:bookmark` embed URL parameter (baked into the signed URL server-side), rather than a `postMessage` call after load — this avoids a render race where the iframe's own initial paint could beat a delayed `select`.
+- **Save** creates a bookmark the first time (`workbook:bookmark:create`), then **Update**s it thereafter (`workbook:bookmark:update`) — visible only in Explore mode, and automatically reverts to View once saved.
+- **Delete** is only shown when a workbook was opened via its bookmark row specifically (not the plain workbook), and removes both the Sigma-side bookmark and the Clerk mapping.
+
+**Real-world quirks this integration works around**, worth knowing if you build on this:
+- Clerk's `updateUserMetadata` performs a **deep merge** — the only way to remove a nested key is to set it to `null` in a delta patch, not recompute and resend the whole object (an empty `{}` is a no-op for removal).
+- This embed doesn't reliably fire the documented `workbook:bookmark:onupdate` outbound event — in practice, `workbook:exploreKey:onchange` (with `exploreKey: null`) is the event that actually confirms a successful update.
+- Re-sending `workbook:bookmark:select` immediately before `update` can reload the bookmark to its last-saved state, discarding the very edits you're trying to save — don't re-select right before update if it's already selected.
+
+### Bookmark flow
+
+```mermaid
+flowchart TD
+    Start([Content Browser tree]) --> Click{Which row clicked?}
+    Click -->|Plain workbook| JWTPlain["/api/sigma/jwt<br/>no wantBookmark"]
+    Click -->|Bookmark row| JWTBookmark["/api/sigma/jwt?wantBookmark=1"]
+
+    JWTBookmark --> Lookup["Server looks up bookmark<br/>via Clerk privateMetadata<br/>getBookmarkEntry(user, urlId)"]
+    Lookup --> Found{Entry exists?}
+    Found -->|Yes| SignWithBookmark["Sign JWT + embed URL<br/>with :bookmark=id param"]
+    Found -->|No| JWTPlain
+
+    JWTPlain --> LoadView["Iframe loads — View mode<br/>published version"]
+    SignWithBookmark --> LoadBookmarked["Iframe loads — View mode<br/>directly into bookmarked state<br/>(no postMessage race)"]
+
+    LoadView --> ExploreClick[User clicks Explore]
+    LoadBookmarked --> ExploreClick
+
+    ExploreClick --> HasKnownBM{bookmarkId already<br/>known client-side?}
+    HasKnownBM -->|Yes| SelectFirst["postMessage<br/>workbook:bookmark:select"]
+    HasKnownBM -->|No| ModeUpdate
+    SelectFirst --> ModeUpdate["postMessage<br/>workbook:mode:update(explore)"]
+    ModeUpdate --> Editing[User edits in Explore]
+
+    Editing --> SaveClick[User clicks Save/Update]
+    SaveClick --> BranchSave{bookmarkId set?}
+
+    %% CREATE
+    BranchSave -->|No: CREATE| SendCreate["postMessage<br/>workbook:bookmark:create<br/>name, isDefault:false, isShared:false"]
+    SendCreate --> CreateWait{"oncreate received<br/>within 10s?"}
+    CreateWait -->|No| CreateTimeout["Show error only<br/>(no data destroyed)"]
+    CreateWait -->|"Yes: workbook:bookmark:oncreate"| CreateSelect["postMessage: select new bookmarkId<br/>(guards next Update)"]
+    CreateSelect --> PersistCreate["POST /api/bookmarks<br/>{urlId, bookmarkId, name}"]
+    PersistCreate --> ClerkWriteC["Clerk delta patch:<br/>privateMetadata.bookmarks[urlId] = {id, name}<br/>(deep merge — never resend whole map)"]
+    ClerkWriteC --> TreeRefreshC["Tree refetches /api/sigma/tree<br/>bookmark row appears"]
+    TreeRefreshC --> ViewC["Mode auto-reverts to View"]
+
+    %% UPDATE
+    BranchSave -->|Yes: UPDATE| SendUpdate["postMessage<br/>workbook:bookmark:update<br/>(no re-select — would wipe pending edits)"]
+    SendUpdate --> UpdateWait{"Confirmation within 10s?"}
+    UpdateWait -->|No| UpdateTimeout["Show error only<br/>bookmarkId NOT cleared —<br/>never destroy on mere timeout"]
+    UpdateWait -->|"onupdate OR<br/>exploreKey:onchange(null)"| UpdateSuccess["Show success"]
+    UpdateSuccess --> ViewU["Mode auto-reverts to View"]
+
+    %% DELETE
+    Editing -.->|"or from View,<br/>if opened via bookmark row"| DeleteClick1[Click 'Delete bookmark']
+    DeleteClick1 --> DeleteConfirm[Click 'Confirm delete?']
+    DeleteConfirm --> SendDelete["postMessage<br/>workbook:bookmark:delete{bookmarkId}"]
+    SendDelete --> DeleteWait{"ondelete received<br/>within 3s?"}
+    DeleteWait -->|"No — self-heal<br/>(intent was removal anyway)"| DeleteProceed
+    DeleteWait -->|"Yes: workbook:bookmark:ondelete"| DeleteProceed["POST /api/bookmarks<br/>{urlId, bookmarkId: null}"]
+    DeleteProceed --> ClerkWriteD["Clerk delta patch:<br/>privateMetadata.bookmarks[urlId] = null<br/>(removes key via deep merge)"]
+    ClerkWriteD --> NavBack["DashboardShell resets to<br/>plain parent workbook (fresh remount)"]
+    NavBack --> TreeRefreshD["Tree refetches — bookmark<br/>row disappears"]
+
+    %% Error path
+    CreateWait -.->|"workbook:error"| ErrClear["Clear pending refs,<br/>show Sigma's error message"]
+    UpdateWait -.->|"workbook:error"| ErrClear
+    DeleteWait -.->|"workbook:error"| ErrClear
 ```
 
 ---
@@ -90,8 +199,8 @@ SESSION_SECRET=
 
 ```js
 const NAV_ITEMS = [
-  { label: 'Overview', mode: '', icon: (...) },
-  { label: 'Sales',    mode: 'sales', icon: (...) },  // ← add this
+  { label: 'Overview', embeds: [{ mode: '', label: 'Overview', span: 12 }], icon: (...) },
+  { label: 'Sales',     embeds: [{ mode: 'sales', label: 'Sales', span: 12 }], icon: (...) },  // ← add this
 ];
 ```
 
@@ -113,55 +222,33 @@ npm install
 
 # 3. Set up environment
 cp .env.example .env.local
-# Fill in your Sigma credentials and workbook URL
+# Fill in your Sigma credentials, workbook URL, and Clerk keys
 
 # 4. Run dev server
 npm run dev
 # → http://localhost:3000
 ```
 
-Demo login credentials are configured via environment variables (`DEMO_USER_EMAIL`, `DEMO_USER_PASSWORD`). In production, replace the demo auth with a real identity provider — see [Authentication options](#authentication-options) below.
+Auth is handled entirely by Clerk (`/sign-in`, `/sign-up`) — you'll need a Clerk application and its keys (`CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`) for local dev, since the dashboard is behind Clerk's middleware.
 
 ---
 
-## Authentication options
+## Authentication
 
-The Sigma embedding architecture is auth-agnostic — the JWT route only needs an email to place in the `sub` claim, regardless of how the user authenticated. This makes it straightforward to swap or upgrade the auth layer.
+This demo uses [Clerk](https://clerk.com) for real multi-user auth — not a placeholder. `middleware.js` protects `/dashboard` via `clerkMiddleware`, and the Sigma JWT route reads the authenticated user's email (and optional `sigmaEmail`/`accountType`/`teams`/`userAttributes` from Clerk `publicMetadata`) to build the embed JWT's claims.
 
-### Option 1 — Clerk (recommended for most cases)
+Per-user Sigma identity and RLS attributes are set in the Clerk dashboard → Users → [user] → Metadata → Public:
 
-[Clerk](https://clerk.com) is the fastest path to multi-user auth in Next.js. The free tier supports up to 50,000 monthly retained users.
-
-- Pre-built login/signup UI
-- Each user's email maps directly to the Sigma `sub` claim
-- Custom `sigmaEmail` can be stored in Clerk user metadata for row-level security
-- Okta and Entra (Azure AD) SSO available as enterprise connections — no code changes required, configured in the Clerk dashboard
-
-**JWT route change (simplified):**
-```js
-import { auth, clerkClient } from '@clerk/nextjs/server';
-
-const { userId } = auth();
-const user = await clerkClient.users.getUser(userId);
-const sigmaEmail = user.publicMetadata.sigmaEmail || user.emailAddresses[0].emailAddress;
+```json
+{
+  "sigmaEmail": "user@example.com",
+  "accountType": "viewer",
+  "teams": ["sales", "emea"],
+  "userAttributes": { "region": "EMEA" }
+}
 ```
 
-### Option 2 — NextAuth.js (Okta / Entra directly)
-
-For a standalone clone without Clerk, [NextAuth.js](https://next-auth.js.org) has built-in providers for both:
-
-```js
-import OktaProvider from 'next-auth/providers/okta';
-import AzureADProvider from 'next-auth/providers/azure-ad';
-
-// In [...nextauth]/route.js:
-providers: [
-  OktaProvider({ clientId, clientSecret, issuer }),
-  AzureADProvider({ clientId, clientSecret, tenantId }),
-]
-```
-
-The Sigma JWT side of the codebase (`lib/sigma-embed.js`, `/api/sigma/jwt`) requires **no changes** in either case — it simply reads an email from the session.
+The Sigma embedding architecture itself is auth-agnostic — `lib/sigma-embed.js` and `/api/sigma/jwt` only need an email to place in the `sub` claim, regardless of how the user authenticated. If you'd rather use [NextAuth.js](https://next-auth.js.org) with Okta/Entra directly instead of Clerk, only the session-reading code in the JWT route changes; the signing logic is unaffected.
 
 ---
 
@@ -238,7 +325,7 @@ The JWT generated by `/api/sigma/jwt` includes these Sigma claims:
 | `teams` | Optional array | Must match team names in your Sigma org |
 | `user_attributes` | Optional object | Passed through for row-level security |
 
-See [Sigma JWT Claims Reference](https://help.sigmacomputing.com/docs/json-web-token-claims-reference) for full documentation.
+See [Sigma JWT Claims Reference](https://help.sigmacomputing.com/docs/json-web-token-claims-reference) for full documentation. Embed URL parameters (`:embed`, `:jwt`, `:bookmark`, UI controls) are separate from the JWT and documented in [Sigma's URL parameter reference](https://help.sigmacomputing.com/docs/special-characters-for-url-parameters).
 
 ---
 
@@ -249,21 +336,33 @@ embed_examplesite/
 ├── app/
 │   ├── api/
 │   │   ├── auth/
-│   │   │   ├── login/route.js      # Validates credentials, creates session cookie
-│   │   │   └── logout/route.js     # Clears session cookie
+│   │   │   ├── login/route.js      # Legacy demo credential auth — unused; Clerk handles /sign-in
+│   │   │   └── logout/route.js
+│   │   ├── bookmarks/route.js      # GET/POST — per-user bookmark mapping in Clerk privateMetadata
 │   │   └── sigma/
-│   │       └── jwt/route.js        # Verifies session, returns signed Sigma embed URL
+│   │       ├── jwt/route.js        # Verifies Clerk session, returns signed Sigma embed URL
+│   │       └── tree/route.js       # Content Browser tree via the Sigma REST API
 │   ├── dashboard/page.js           # Protected dashboard page (server component)
-│   ├── login/page.js               # Login form
+│   ├── interested/page.js          # Public anonymous embed page (no sign-on)
+│   ├── login/page.js               # Redirects to /sign-in
+│   ├── sign-in/[[...sign-in]]/page.js
+│   ├── sign-up/[[...sign-up]]/page.js
 │   ├── page.js                     # Public landing page
 │   ├── layout.js                   # Root layout + Inter font
 │   └── globals.css                 # Tailwind base + custom utilities
 ├── components/
-│   ├── DashboardShell.js           # Nav, sidebar, embed container (client component)
-│   └── SigmaEmbed.js               # Fetches JWT and renders Sigma iframe
+│   ├── DashboardShell.js           # Nav, sidebar (incl. Content Browser), embed container
+│   ├── SigmaEmbed.js               # Fetches JWT, renders iframe, bookmark Save/Update/Delete UI
+│   ├── ContentTree.js              # Sidebar tree — folders, workbooks, bookmark rows
+│   ├── AnonymousEmbed.js           # Embed component for /interested
+│   ├── JwtInspector.js             # Dev panel — decoded JWT claims per embed
+│   └── ExpiryBadge.js              # Live JWT expiry countdown
 ├── lib/
-│   ├── session.js                  # Session creation and verification (jose)
-│   └── sigma-embed.js              # JWT generation and embed URL construction
-├── middleware.js                   # Protects /dashboard — redirects if no session
+│   ├── sigma-embed.js              # JWT generation and embed URL construction (incl. :bookmark)
+│   ├── sigma-api.js                # Sigma REST API client — org tree, member file grants
+│   ├── bookmarks.js                # Bookmark CRUD against Clerk privateMetadata
+│   ├── embed-url-params.js         # Per-mode URL filter params (from Clerk publicMetadata)
+│   └── session.js                  # Legacy demo session signing — unused; Clerk handles sessions
+├── middleware.js                   # Clerk middleware — protects /dashboard
 └── .env.example                    # Environment variable reference
 ```
