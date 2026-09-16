@@ -4,14 +4,14 @@
 
 @layer base {
   body {
-    background: #09090b;
-    color: #e4e4e7;
+    background: #ffffff;
+    color: #1c1e1e;
   }
 
   ::-webkit-scrollbar { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.14); }
+  ::-webkit-scrollbar-thumb { background: rgba(10,10,10,0.12); border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(10,10,10,0.2); }
 }
 
 @keyframes float-slow {
@@ -28,8 +28,8 @@
   50% { transform: translateY(-15px) translateX(-20px) scale(0.95); }
 }
 @keyframes pulse-slow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(99,102,241,0.3); }
-  50% { box-shadow: 0 0 0 12px rgba(99,102,241,0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(26,112,241,0.3); }
+  50% { box-shadow: 0 0 0 12px rgba(26,112,241,0); }
 }
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(16px); }
@@ -38,20 +38,25 @@
 
 @layer utilities {
   .gradient-text {
-    background: linear-gradient(135deg, #fff 0%, #c7d2fe 40%, #818cf8 100%);
+    background: linear-gradient(135deg, #1c1e1e 0%, #155ac1 55%, #1a70f1 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
+  /* Sigma's pale lavender-to-white decorative wash, used behind hero/section panels. */
+  .brand-wash {
+    background: linear-gradient(104.88deg, #E3E5F9 4.69%, #EDEEFB 39.24%, #FFFFFF 100%);
+  }
+
   .glass {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.07);
+    background: rgba(255,255,255,0.7);
+    border: 1px solid rgba(10,10,10,0.08);
     backdrop-filter: blur(12px);
   }
 
   .glow-accent {
-    box-shadow: 0 0 0 1px rgba(99,102,241,0.3), 0 0 30px rgba(99,102,241,0.12);
+    box-shadow: 0 0 0 1px rgba(26,112,241,0.25), 0 0 30px rgba(26,112,241,0.1);
   }
 
   .animate-float-slow { animation: float-slow 8s ease-in-out infinite; }
@@ -61,14 +66,14 @@
   .animate-fade-up { animation: fade-up 0.6s ease both; }
 
   .login-dots {
-    background-image: radial-gradient(circle, rgba(255,255,255,0.12) 1px, transparent 1px);
+    background-image: radial-gradient(circle, rgba(10,10,10,0.1) 1px, transparent 1px);
     background-size: 28px 28px;
   }
 
   .grid-bg {
     background-image:
-      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+      linear-gradient(rgba(10,10,10,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(10,10,10,0.04) 1px, transparent 1px);
     background-size: 48px 48px;
   }
 }

@@ -65,20 +65,20 @@ function ClaimRow({ label, value, exp }) {
   }
 
   return (
-    <div className={`py-2.5 border-b border-white/[0.04] last:border-0 ${isRls ? 'rounded-lg bg-amber-500/[0.06] border border-amber-500/20 px-3 my-1' : ''}`}>
+    <div className={`py-2.5 border-b border-black/[0.05] last:border-0 ${isRls ? 'rounded-lg bg-amber-50 border border-amber-200 px-3 my-1' : ''}`}>
       <div className="flex items-center gap-2 mb-1">
-        <p className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider">{label}</p>
+        <p className="text-[10px] font-medium text-ink-secondary uppercase tracking-wider">{label}</p>
         {isRls && (
-          <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase tracking-wider">
+          <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-300 uppercase tracking-wider">
             RLS
           </span>
         )}
         {label === 'exp' && <ExpiryBadge exp={value} />}
       </div>
       {isObject && !isArray ? (
-        <pre className="text-[11px] whitespace-pre-wrap font-mono text-amber-300 leading-relaxed">{display}</pre>
+        <pre className="text-[11px] whitespace-pre-wrap font-mono text-amber-700 leading-relaxed">{display}</pre>
       ) : (
-        <p className={`text-xs break-all ${isRls ? 'text-amber-200' : 'text-zinc-200'}`}>{display}</p>
+        <p className={`text-xs break-all ${isRls ? 'text-amber-700' : 'text-ink-primary'}`}>{display}</p>
       )}
     </div>
   );
@@ -89,23 +89,23 @@ function ClaimRow({ label, value, exp }) {
 function SecurityCallout() {
   const [open, setOpen] = useState(false);
   return (
-    <div className="bg-zinc-900 border border-white/[0.06] rounded-lg mb-4 overflow-hidden">
+    <div className="bg-zinc-50 border border-black/[0.06] rounded-lg mb-4 overflow-hidden">
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-white/[0.02] transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-black/[0.02] transition-colors"
       >
         <div className="flex items-center gap-2">
-          <svg className="w-3.5 h-3.5 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+          <svg className="w-3.5 h-3.5 text-ink-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
           </svg>
-          <span className="text-xs font-medium text-zinc-300">Why is this secure?</span>
+          <span className="text-xs font-medium text-ink-primary">Why is this secure?</span>
         </div>
-        <svg className={`w-3.5 h-3.5 text-zinc-600 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <svg className={`w-3.5 h-3.5 text-zinc-400 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
         </svg>
       </button>
       {open && (
-        <div className="px-4 pb-4 space-y-2.5 border-t border-white/[0.04] pt-3">
+        <div className="px-4 pb-4 space-y-2.5 border-t border-black/[0.05] pt-3">
           {[
             { icon: '🔒', title: 'Secret never leaves the server', body: 'SIGMA_SECRET is only accessible server-side. The browser receives a signed token, never the key used to sign it.' },
             { icon: '⏱️', title: 'Tokens are time-limited', body: 'Every token has an exp claim. Even if intercepted, it expires quickly and cannot be reused.' },
@@ -115,8 +115,8 @@ function SecurityCallout() {
             <div key={title} className="flex gap-2.5">
               <span className="text-sm mt-0.5 shrink-0">{icon}</span>
               <div>
-                <p className="text-[11px] font-medium text-zinc-300">{title}</p>
-                <p className="text-[11px] text-zinc-500 leading-relaxed mt-0.5">{body}</p>
+                <p className="text-[11px] font-medium text-ink-primary">{title}</p>
+                <p className="text-[11px] text-ink-secondary leading-relaxed mt-0.5">{body}</p>
               </div>
             </div>
           ))}
@@ -154,8 +154,8 @@ function ClaimsPanel({ jwts, embeds }) {
               onClick={() => setActiveEmbed(e.mode)}
               className={`text-[11px] px-3 py-1 rounded-lg border transition-all ${
                 activeEmbed === e.mode
-                  ? 'bg-indigo-500/15 border-indigo-500/30 text-indigo-300'
-                  : 'bg-white/[0.03] border-white/[0.06] text-zinc-500 hover:text-zinc-300'
+                  ? 'bg-brand-50 border-brand-500/30 text-brand-600'
+                  : 'bg-black/[0.03] border-black/[0.06] text-ink-secondary hover:text-ink-primary'
               }`}
             >
               {e.label}
@@ -169,11 +169,11 @@ function ClaimsPanel({ jwts, embeds }) {
           <SecurityCallout />
 
           {/* Endpoints */}
-          <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg p-3 mb-4 space-y-2.5">
-            <p className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider">Endpoints</p>
+          <div className="bg-black/[0.03] border border-black/[0.06] rounded-lg p-3 mb-4 space-y-2.5">
+            <p className="text-[10px] font-medium text-ink-secondary uppercase tracking-wider">Endpoints</p>
             <div>
-              <p className="text-[10px] text-zinc-500 mb-1">Token issued by</p>
-              <code className="text-[11px] font-mono text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 px-2 py-1 rounded block">
+              <p className="text-[10px] text-ink-secondary mb-1">Token issued by</p>
+              <code className="text-[11px] font-mono text-brand-600 bg-brand-50 border border-brand-500/20 px-2 py-1 rounded block">
                 GET /api/sigma/jwt{activeEmbed ? `?mode=${activeEmbed}` : ''}
               </code>
             </div>
@@ -182,39 +182,39 @@ function ClaimsPanel({ jwts, embeds }) {
               const filterEntries = Object.entries(filters);
               return (
                 <div>
-                  <p className="text-[10px] text-zinc-500 mb-1">Sigma embed API call</p>
-                  <div className="text-[11px] font-mono bg-emerald-500/10 border border-emerald-500/20 px-2 py-2 rounded break-all leading-relaxed">
-                    <span className="text-emerald-400 font-semibold">{base}</span>
+                  <p className="text-[10px] text-ink-secondary mb-1">Sigma embed API call</p>
+                  <div className="text-[11px] font-mono bg-teal-50 border border-teal-200 px-2 py-2 rounded break-all leading-relaxed">
+                    <span className="text-chart-teal font-semibold">{base}</span>
                     {params.map((p, i) => (
                       <div
                         key={i}
-                        className={`pl-2 ${p.isFilter ? 'text-amber-300' : 'text-emerald-600'}`}
+                        className={`pl-2 ${p.isFilter ? 'text-amber-700' : 'text-chart-teal'}`}
                         title={p.isFilter ? 'URL filter from Clerk publicMetadata' : 'Sigma embed control'}
                       >
                         {i === 0 ? '?' : '&'}{p.key}={p.value}
-                        {p.isFilter && <span className="text-[9px] text-amber-500 ml-1.5">← from metadata</span>}
+                        {p.isFilter && <span className="text-[9px] text-amber-600 ml-1.5">← from metadata</span>}
                       </div>
                     ))}
                   </div>
 
                   {/* URL filter params explanation — sits with the API call since they're part of it */}
                   {filterEntries.length > 0 && (
-                    <div className="mt-2 bg-amber-500/[0.06] border border-amber-500/20 rounded-lg p-3">
+                    <div className="mt-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
                       <div className="flex items-center gap-2 mb-2">
-                        <p className="text-[10px] font-medium text-amber-400 uppercase tracking-wider">URL filters in this call</p>
-                        <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase tracking-wider">
+                        <p className="text-[10px] font-medium text-amber-700 uppercase tracking-wider">URL filters in this call</p>
+                        <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-300 uppercase tracking-wider">
                           from metadata
                         </span>
                       </div>
-                      <p className="text-[10px] text-amber-300/80 leading-relaxed mb-2">
-                        These come from Clerk <code className="bg-amber-500/10 px-1 rounded">publicMetadata</code> and are appended to the URL — they are NOT part of the JWT.
+                      <p className="text-[10px] text-amber-700/90 leading-relaxed mb-2">
+                        These come from Clerk <code className="bg-amber-100 px-1 rounded">publicMetadata</code> and are appended to the URL — they are NOT part of the JWT.
                       </p>
                       <div className="space-y-1">
                         {filterEntries.map(([k, v]) => (
                           <div key={k} className="flex items-center gap-2 text-[11px] font-mono">
-                            <span className="text-amber-400">{k}</span>
-                            <span className="text-amber-600">=</span>
-                            <span className="text-amber-200">{v}</span>
+                            <span className="text-amber-700">{k}</span>
+                            <span className="text-amber-500">=</span>
+                            <span className="text-amber-800">{v}</span>
                           </div>
                         ))}
                       </div>
@@ -230,45 +230,45 @@ function ClaimsPanel({ jwts, embeds }) {
             <div key={key}>
               <ClaimRow label={key} value={value} />
               {claimMeta[key]?.desc && (
-                <p className="text-[10px] text-zinc-600 mb-1 -mt-1.5 px-1">{claimMeta[key].desc}</p>
+                <p className="text-[10px] text-zinc-400 mb-1 -mt-1.5 px-1">{claimMeta[key].desc}</p>
               )}
             </div>
           ))}
         </>
       ) : (
-        <p className="text-sm text-zinc-500 text-center mt-8">
+        <p className="text-sm text-ink-secondary text-center mt-8">
           {Object.keys(jwts).length > 0 ? 'Select an embed above.' : 'No token available yet.'}
         </p>
       )}
 
       {/* Raw token + actions */}
       {jwt && (
-        <div className="mt-4 pt-4 border-t border-white/[0.06]">
+        <div className="mt-4 pt-4 border-t border-black/[0.06]">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider">Raw token</p>
+            <p className="text-[10px] font-medium text-ink-secondary uppercase tracking-wider">Raw token</p>
             <div className="flex items-center gap-2">
               <button
                 onClick={copyToken}
-                className="flex items-center gap-1 text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors"
+                className="flex items-center gap-1 text-[10px] text-ink-secondary hover:text-ink-primary transition-colors"
               >
                 {copied ? (
-                  <><svg className="w-3 h-3 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg><span className="text-emerald-400">Copied</span></>
+                  <><svg className="w-3 h-3 text-chart-teal" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg><span className="text-chart-teal">Copied</span></>
                 ) : (
                   <><svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" /></svg>Copy</>
                 )}
               </button>
-              <span className="text-zinc-700">·</span>
+              <span className="text-zinc-300">·</span>
               <a
                 href={`https://jwt.io/#debugger-io?token=${encodeURIComponent(jwt)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[10px] text-indigo-400 hover:text-indigo-300 transition-colors"
+                className="text-[10px] text-brand-600 hover:text-brand-700 transition-colors"
               >
                 Open in jwt.io ↗
               </a>
             </div>
           </div>
-          <div className="bg-white/[0.03] rounded-lg p-3 font-mono text-[9px] text-zinc-600 break-all leading-relaxed max-h-24 overflow-y-auto">
+          <div className="bg-black/[0.03] rounded-lg p-3 font-mono text-[9px] text-zinc-500 break-all leading-relaxed max-h-24 overflow-y-auto">
             {jwt}
           </div>
         </div>
@@ -290,10 +290,10 @@ const FLOW_STEPS = [
 ];
 
 const actorColors = {
-  zinc:    { dot: 'bg-zinc-500',    badge: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20',       line: 'bg-zinc-700' },
-  indigo:  { dot: 'bg-indigo-500',  badge: 'bg-indigo-500/10 text-indigo-300 border-indigo-500/20', line: 'bg-indigo-900' },
-  violet:  { dot: 'bg-violet-500',  badge: 'bg-violet-500/10 text-violet-300 border-violet-500/20', line: 'bg-violet-900' },
-  emerald: { dot: 'bg-emerald-500', badge: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20', line: 'bg-emerald-900' },
+  zinc:    { dot: 'bg-zinc-400',    badge: 'bg-zinc-100 text-zinc-600 border-zinc-300',       line: 'bg-zinc-200' },
+  indigo:  { dot: 'bg-brand-500',  badge: 'bg-brand-50 text-brand-600 border-brand-500/20', line: 'bg-brand-200' },
+  violet:  { dot: 'bg-violet-500',  badge: 'bg-violet-50 text-violet-600 border-violet-300', line: 'bg-violet-200' },
+  emerald: { dot: 'bg-chart-teal', badge: 'bg-teal-50 text-chart-teal border-teal-200', line: 'bg-teal-200' },
 };
 
 function FlowDiagram({ embedCount }) {
@@ -312,8 +312,8 @@ function FlowDiagram({ embedCount }) {
       </div>
 
       {embedCount > 1 && (
-        <div className="bg-violet-500/[0.08] border border-violet-500/20 rounded-lg px-3 py-2.5 mb-4">
-          <p className="text-[10px] text-violet-300 leading-relaxed">
+        <div className="bg-violet-50 border border-violet-200 rounded-lg px-3 py-2.5 mb-4">
+          <p className="text-[10px] text-violet-700 leading-relaxed">
             <span className="font-semibold">{embedCount} embeds on this page.</span> Steps 2 and 6 repeat once per embed — each gets its own independently signed JWT.
           </p>
         </div>
@@ -329,13 +329,13 @@ function FlowDiagram({ embedCount }) {
               {!isLast && <div className={`w-px flex-1 my-1 ${c.line}`} />}
             </div>
             <div className="pb-5">
-              <p className="text-xs font-medium text-zinc-200 leading-snug">{step.label}</p>
+              <p className="text-xs font-medium text-ink-primary leading-snug">{step.label}</p>
               {step.endpoint && (
                 <code className={`inline-block mt-1 text-[10px] px-2 py-0.5 rounded border font-mono ${c.badge}`}>
                   {step.endpoint}
                 </code>
               )}
-              <p className="text-[11px] text-zinc-500 mt-1.5 leading-relaxed">{step.detail}</p>
+              <p className="text-[11px] text-ink-secondary mt-1.5 leading-relaxed">{step.detail}</p>
             </div>
           </div>
         );
@@ -366,17 +366,17 @@ function SessionLengthControl({ sessionLength, onRegenerate }) {
 
   return (
     <div className="py-3 space-y-4">
-      <div className="bg-amber-500/[0.06] border border-amber-500/20 rounded-lg px-3 py-2.5">
-        <p className="text-[10px] text-amber-300 leading-relaxed">
-          <span className="font-semibold">Demo control.</span> Override the JWT <code className="bg-amber-500/10 px-1 py-0.5 rounded text-amber-200">exp</code> claim to see what happens when a token expires while the embed is in use. Minimum 30 seconds.
+      <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
+        <p className="text-[10px] text-amber-700 leading-relaxed">
+          <span className="font-semibold">Demo control.</span> Override the JWT <code className="bg-amber-100 px-1 py-0.5 rounded text-amber-800">exp</code> claim to see what happens when a token expires while the embed is in use. Minimum 30 seconds.
         </p>
-        <p className="text-[10px] text-amber-300/70 leading-relaxed mt-1.5">
+        <p className="text-[10px] text-amber-700/80 leading-relaxed mt-1.5">
           Select a preset or enter a custom value, then click <span className="font-semibold">Apply & regenerate</span> — the active token is not touched until you do.
         </p>
       </div>
 
       <div>
-        <p className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider mb-2">Quick presets</p>
+        <p className="text-[10px] font-medium text-ink-secondary uppercase tracking-wider mb-2">Quick presets</p>
         <div className="grid grid-cols-2 gap-2">
           {PRESETS.map(({ label, value, note }) => {
             const isPending = pending === String(value);
@@ -387,14 +387,14 @@ function SessionLengthControl({ sessionLength, onRegenerate }) {
                 onClick={() => setPending(String(value))}
                 className={`text-left px-3 py-2.5 rounded-lg border transition-all ${
                   isPending
-                    ? 'bg-indigo-500/15 border-indigo-500/40 text-indigo-300 ring-1 ring-indigo-500/30'
+                    ? 'bg-brand-50 border-brand-500/40 text-brand-600 ring-1 ring-brand-500/30'
                     : isActive
-                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
-                    : 'bg-white/[0.03] border-white/[0.06] text-zinc-300 hover:border-white/[0.12] hover:bg-white/[0.05]'
+                    ? 'bg-teal-50 border-teal-200 text-chart-teal'
+                    : 'bg-black/[0.03] border-black/[0.06] text-zinc-700 hover:border-black/[0.12] hover:bg-black/[0.05]'
                 }`}
               >
                 <p className="text-sm font-mono font-semibold">{label}</p>
-                {note && <p className="text-[10px] text-zinc-500 mt-0.5">{note}</p>}
+                {note && <p className="text-[10px] text-ink-secondary mt-0.5">{note}</p>}
               </button>
             );
           })}
@@ -402,7 +402,7 @@ function SessionLengthControl({ sessionLength, onRegenerate }) {
       </div>
 
       <div>
-        <p className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider mb-2">Custom (seconds)</p>
+        <p className="text-[10px] font-medium text-ink-secondary uppercase tracking-wider mb-2">Custom (seconds)</p>
         <div className="flex gap-2">
           <input
             type="number"
@@ -411,30 +411,30 @@ function SessionLengthControl({ sessionLength, onRegenerate }) {
             value={pending}
             onChange={(e) => setPending(e.target.value)}
             placeholder="e.g. 45"
-            className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-indigo-500/50"
+            className="flex-1 bg-black/[0.03] border border-black/[0.08] rounded-lg px-3 py-2 text-xs text-ink-primary placeholder-zinc-400 focus:outline-none focus:border-brand-500/50"
           />
         </div>
-        <p className="text-[10px] text-zinc-600 mt-1.5">Range: 30 – 2,592,000 seconds (30 days max)</p>
+        <p className="text-[10px] text-ink-secondary mt-1.5">Range: 30 – 2,592,000 seconds (30 days max)</p>
       </div>
 
       <button
         onClick={apply}
         disabled={!pendingValid || !hasChange}
-        className="w-full px-3 py-2.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed text-white transition-colors shadow-lg shadow-indigo-500/20"
+        className="w-full px-3 py-2.5 text-xs font-semibold rounded-lg bg-brand-500 hover:bg-brand-600 disabled:opacity-30 disabled:cursor-not-allowed text-white transition-colors shadow-card"
       >
         Apply & regenerate JWT
       </button>
 
       <div>
-        <p className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider mb-2">Active</p>
-        <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2.5 flex items-center justify-between">
-          <span className="text-xs text-zinc-300 font-mono">
+        <p className="text-[10px] font-medium text-ink-secondary uppercase tracking-wider mb-2">Active</p>
+        <div className="bg-black/[0.03] border border-black/[0.06] rounded-lg px-3 py-2.5 flex items-center justify-between">
+          <span className="text-xs text-ink-primary font-mono">
             {sessionLength !== undefined ? `${sessionLength}s` : 'Server default (SESSION_LENGTH)'}
           </span>
           {sessionLength !== undefined && (
             <button
               onClick={() => { setPending(''); onRegenerate(undefined); }}
-              className="text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors"
+              className="text-[10px] text-ink-secondary hover:text-ink-primary transition-colors"
             >
               Reset to default
             </button>
@@ -459,14 +459,14 @@ export default function JwtInspector({ jwts, embeds, open, onClose, sessionLengt
     <>
       <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="fixed top-0 right-0 h-full w-[420px] max-w-full z-50 bg-[#0d0d10] border-l border-white/[0.07] flex flex-col shadow-2xl">
+      <div className="fixed top-0 right-0 h-full w-[420px] max-w-full z-50 bg-white border-l border-black/[0.07] flex flex-col shadow-2xl">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-black/[0.06]">
           <div className="flex-1 min-w-0">
-            <h2 className="text-sm font-semibold text-white">JWT Claims Inspector</h2>
+            <h2 className="text-sm font-semibold text-ink-primary">JWT Claims Inspector</h2>
             <div className="flex items-center gap-2 mt-1 flex-wrap">
-              <p className="text-[10px] text-zinc-500">
+              <p className="text-[10px] text-ink-secondary">
                 Sigma embed authentication{embeds.length > 1 && ` · ${embeds.length} embeds`}
               </p>
               {firstClaims?.exp && <ExpiryBadge exp={firstClaims.exp} />}
@@ -474,7 +474,7 @@ export default function JwtInspector({ jwts, embeds, open, onClose, sessionLengt
           </div>
           <button
             onClick={onClose}
-            className="ml-3 w-7 h-7 shrink-0 rounded-lg flex items-center justify-center text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.06] transition-all"
+            className="ml-3 w-7 h-7 shrink-0 rounded-lg flex items-center justify-center text-ink-secondary hover:text-ink-primary hover:bg-black/[0.05] transition-all"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -483,13 +483,13 @@ export default function JwtInspector({ jwts, embeds, open, onClose, sessionLengt
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-white/[0.06] px-5 gap-4">
+        <div className="flex border-b border-black/[0.06] px-5 gap-4">
           {[['flow', 'Auth Flow'], ['claims', 'Decoded Claims'], ['session', 'Session']].map(([t, label]) => (
             <button
               key={t}
               onClick={() => setTab(t)}
               className={`py-2.5 text-xs font-medium border-b-2 -mb-px transition-colors ${
-                tab === t ? 'border-indigo-500 text-indigo-300' : 'border-transparent text-zinc-500 hover:text-zinc-300'
+                tab === t ? 'border-brand-500 text-brand-600' : 'border-transparent text-ink-secondary hover:text-ink-primary'
               }`}
             >
               {label}

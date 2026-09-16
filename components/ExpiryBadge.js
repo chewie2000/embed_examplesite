@@ -39,14 +39,14 @@ export default function ExpiryBadge({ exp, jwt }) {
     ? 'bg-red-500/10 border-red-500/20 text-red-400'
     : remaining < 300
     ? 'bg-amber-500/10 border-amber-500/20 text-amber-400'
-    : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400';
+    : 'bg-mint-400/10 border-mint-border/30 text-mint-ink';
 
   return (
     <span
       title="JWT expiry — controlled by the exp claim. Click 'JWT Claims' → Session tab to adjust."
       className={`inline-flex items-center gap-1.5 text-[10px] font-mono px-2 py-1 rounded-full border ${color}`}
     >
-      <span className={`w-1.5 h-1.5 rounded-full ${remaining === 0 ? 'bg-red-500' : remaining < 300 ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500 animate-pulse'}`} />
+      <span className={`w-1.5 h-1.5 rounded-full ${remaining === 0 ? 'bg-red-500' : remaining < 300 ? 'bg-amber-500 animate-pulse' : 'bg-mint-500 animate-pulse'}`} />
       {remaining > 0 ? `JWT in ${label}` : 'JWT expired'}
     </span>
   );

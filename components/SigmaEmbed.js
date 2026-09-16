@@ -381,27 +381,27 @@ export default function SigmaEmbed({
     return (
       <div className="w-full h-full p-4 space-y-3">
         <div className="flex items-center gap-3">
-          <div className="h-6 w-28 rounded-md bg-white/[0.04] animate-pulse" />
-          <div className="h-6 w-16 rounded-md bg-white/[0.04] animate-pulse" />
+          <div className="h-6 w-28 rounded-md bg-black/[0.04] animate-pulse" />
+          <div className="h-6 w-16 rounded-md bg-black/[0.04] animate-pulse" />
           <div className="flex-1" />
-          <div className="h-6 w-20 rounded-md bg-white/[0.04] animate-pulse" />
+          <div className="h-6 w-20 rounded-md bg-black/[0.04] animate-pulse" />
         </div>
         <div className="grid grid-cols-3 gap-2">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-16 rounded-xl bg-white/[0.04] animate-pulse" />
+            <div key={i} className="h-16 rounded-xl bg-black/[0.04] animate-pulse" />
           ))}
         </div>
-        <div className="h-36 rounded-xl bg-white/[0.04] animate-pulse" />
+        <div className="h-36 rounded-xl bg-black/[0.04] animate-pulse" />
         <div className="space-y-1.5">
-          <div className="h-7 rounded-lg bg-white/[0.04] animate-pulse" />
+          <div className="h-7 rounded-lg bg-black/[0.04] animate-pulse" />
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-9 rounded-lg bg-white/[0.03] animate-pulse" style={{ opacity: 1 - i * 0.2 }} />
+            <div key={i} className="h-9 rounded-lg bg-black/[0.03] animate-pulse" style={{ opacity: 1 - i * 0.2 }} />
           ))}
         </div>
         {slowLoad && (
           <div className="flex items-center justify-center gap-2 pt-2">
             <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-            <p className="text-xs text-amber-400/80">Sigma is taking longer than usual — still loading…</p>
+            <p className="text-xs text-amber-600">Sigma is taking longer than usual — still loading…</p>
           </div>
         )}
       </div>
@@ -411,26 +411,26 @@ export default function SigmaEmbed({
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4 p-6 text-center">
-        <div className="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-          <svg className="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <div className="w-10 h-10 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center">
+          <svg className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
           </svg>
         </div>
         <div>
-          <p className="font-medium text-zinc-200 text-sm mb-1">
+          <p className="font-medium text-ink-primary text-sm mb-1">
             {label ? `"${label}" not configured` : 'Embed not configured'}
           </p>
-          <p className="text-xs text-zinc-500 max-w-xs leading-relaxed">{error}</p>
+          <p className="text-xs text-ink-secondary max-w-xs leading-relaxed">{error}</p>
         </div>
-        <div className="bg-white/[0.03] rounded-xl border border-white/[0.06] p-3 text-left text-[10px] font-mono text-zinc-500 max-w-xs w-full space-y-1">
-          <p className="font-sans font-medium text-zinc-400 mb-1.5">Required in .env.local</p>
+        <div className="bg-black/[0.03] rounded-xl border border-black/[0.06] p-3 text-left text-[10px] font-mono text-ink-secondary max-w-xs w-full space-y-1">
+          <p className="font-sans font-medium text-ink-primary mb-1.5">Required in .env.local</p>
           <p>SIGMA_CLIENT_ID=your_client_id</p>
           <p>SIGMA_SECRET=your_secret</p>
           <p>{mode ? `${mode.toUpperCase()}_SIGMA_BASE_URL=...` : 'SIGMA_BASE_URL=...'}</p>
         </div>
         <button
           onClick={retry}
-          className="mt-2 inline-flex items-center gap-1.5 text-xs text-zinc-300 hover:text-white border border-white/[0.08] hover:border-white/[0.18] px-4 py-2 rounded-lg transition-all"
+          className="mt-2 inline-flex items-center gap-1.5 text-xs text-ink-secondary hover:text-ink-primary border border-black/[0.08] hover:border-black/[0.18] px-4 py-2 rounded-lg transition-all"
         >
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
@@ -448,17 +448,17 @@ export default function SigmaEmbed({
           render near the top of the page). Sends the Embed SDK's
           workbook:mode:update inbound event to the iframe. */}
       {showModeToggle && (
-        <div className="shrink-0 flex flex-col border-b border-white/[0.06] bg-[#0d0d10]">
+        <div className="shrink-0 flex flex-col border-b border-black/[0.06] bg-zinc-50">
           <div className="flex items-center justify-between gap-2 px-2 py-1.5">
             <div className="flex items-center gap-1.5">
               {workbookMode === 'explore' && (
                 <button
                   onClick={handleSave}
                   disabled={!iframeLoaded || saving}
-                  className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 transition-all disabled:opacity-70 disabled:cursor-wait"
+                  className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md bg-teal-50 text-chart-teal hover:bg-teal-100 transition-all disabled:opacity-70 disabled:cursor-wait"
                 >
                   {saving ? (
-                    <span className="w-3 h-3 border-[1.5px] border-emerald-300 border-t-transparent rounded-full animate-spin" />
+                    <span className="w-3 h-3 border-[1.5px] border-chart-teal border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
@@ -474,12 +474,12 @@ export default function SigmaEmbed({
                   title="Delete your saved bookmark for this workbook"
                   className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md transition-all disabled:opacity-70 disabled:cursor-wait ${
                     confirmingDelete
-                      ? 'bg-red-500/20 text-red-300'
-                      : 'text-zinc-500 hover:text-red-300 hover:bg-red-500/10'
+                      ? 'bg-red-100 text-red-700'
+                      : 'text-ink-secondary hover:text-red-600 hover:bg-red-50'
                   }`}
                 >
                   {deleting && (
-                    <span className="w-3 h-3 border-[1.5px] border-red-300 border-t-transparent rounded-full animate-spin" />
+                    <span className="w-3 h-3 border-[1.5px] border-red-500 border-t-transparent rounded-full animate-spin" />
                   )}
                   {deleting ? 'Deleting…' : confirmingDelete ? 'Confirm delete?' : 'Delete bookmark'}
                 </button>
@@ -495,8 +495,8 @@ export default function SigmaEmbed({
                   title={m === 'explore' ? 'Requires the embed user\'s account type to allow Explore ("Full explore" permission)' : undefined}
                   className={`text-xs px-2.5 py-1 rounded-md capitalize transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
                     workbookMode === m
-                      ? 'bg-indigo-500/20 text-indigo-300'
-                      : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.04]'
+                      ? 'bg-brand-50 text-brand-600'
+                      : 'text-ink-secondary hover:text-ink-primary hover:bg-black/[0.04]'
                   }`}
                 >
                   {m}
@@ -506,8 +506,8 @@ export default function SigmaEmbed({
           </div>
 
           {feedback && (
-            <div className={`flex items-center gap-1.5 px-2.5 pb-1.5 text-[11px] ${feedback.type === 'error' ? 'text-red-300' : 'text-emerald-300'}`}>
-              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${feedback.type === 'error' ? 'bg-red-400' : 'bg-emerald-400'}`} />
+            <div className={`flex items-center gap-1.5 px-2.5 pb-1.5 text-[11px] ${feedback.type === 'error' ? 'text-red-600' : 'text-chart-teal'}`}>
+              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${feedback.type === 'error' ? 'bg-red-500' : 'bg-chart-teal'}`} />
               {feedback.text}
             </div>
           )}
@@ -527,14 +527,14 @@ export default function SigmaEmbed({
 
         {/* Pre-load shimmer while iframe is still loading */}
         {!iframeLoaded && !iframeTimedOut && (
-          <div className="absolute inset-0 bg-[#0d0d10] flex items-center justify-center pointer-events-none">
+          <div className="absolute inset-0 bg-white flex items-center justify-center pointer-events-none">
             <div className="flex flex-col items-center gap-3">
-              <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-              <p className="text-xs text-zinc-500">Loading Sigma workbook…</p>
+              <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+              <p className="text-xs text-ink-secondary">Loading Sigma workbook…</p>
               {iframeSlow && (
                 <div className="flex items-center gap-2 mt-1">
                   <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                  <p className="text-xs text-amber-400/80 max-w-xs text-center leading-relaxed">
+                  <p className="text-xs text-amber-600 max-w-xs text-center leading-relaxed">
                     First load after a while can take longer — Sigma is warming up the workbook.
                   </p>
                 </div>
@@ -545,28 +545,28 @@ export default function SigmaEmbed({
 
         {/* Timeout overlay — covers Chrome's native error page */}
         {iframeTimedOut && (
-          <div className="absolute inset-0 bg-[#0d0d10] flex flex-col items-center justify-center gap-4 p-8 text-center">
-            <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-              <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <div className="absolute inset-0 bg-white flex flex-col items-center justify-center gap-4 p-8 text-center">
+            <div className="w-12 h-12 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center">
+              <svg className="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
             <div>
-              <p className="font-medium text-zinc-200 text-sm mb-1">Sigma is taking too long to respond</p>
-              <p className="text-xs text-zinc-500 max-w-sm leading-relaxed">
+              <p className="font-medium text-ink-primary text-sm mb-1">Sigma is taking too long to respond</p>
+              <p className="text-xs text-ink-secondary max-w-sm leading-relaxed">
                 The workbook didn't load within {IFRAME_LOAD_TIMEOUT_MS / 1000} seconds. This sometimes happens on first load — Sigma may need to warm up.
               </p>
             </div>
             <button
               onClick={retry}
-              className="inline-flex items-center gap-1.5 text-sm text-white bg-indigo-600 hover:bg-indigo-500 px-5 py-2.5 rounded-lg font-medium transition-colors shadow-lg shadow-indigo-500/20"
+              className="inline-flex items-center gap-1.5 text-sm text-white bg-brand-500 hover:bg-brand-600 px-5 py-2.5 rounded-lg font-medium transition-colors shadow-card"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
               </svg>
               Retry
             </button>
-            <p className="text-[10px] text-zinc-600">A fresh JWT will be issued.</p>
+            <p className="text-[10px] text-ink-secondary">A fresh JWT will be issued.</p>
           </div>
         )}
       </div>
