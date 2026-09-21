@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { SWAP_TEAMS } from '@/lib/teams';
+import InfoButton from './InfoButton';
 
 const teamIcon = (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -92,9 +93,19 @@ export default function TeamSwapSidebar() {
   return (
     <aside className="w-64 shrink-0 border-r border-black/[0.06] bg-white flex flex-col">
       <div className="p-3 gap-0.5 flex flex-col shrink-0">
-        <p className="text-[10px] font-semibold text-ink-secondary uppercase tracking-widest mb-2 px-2 pt-1">
-          Teams
-        </p>
+        <div className="flex items-center gap-1.5 mb-2 px-2 pt-1">
+          <p className="text-[10px] font-semibold text-ink-secondary uppercase tracking-widest">
+            Teams
+          </p>
+          <InfoButton title="Team Swapping via JWT">
+            Picking a team re-signs this embed&apos;s JWT with only that team in the{' '}
+            <code className="text-brand-600">teams</code> claim. Sigma resolves everything the embed
+            user can reach for the session from that claim — it doesn&apos;t change anyone&apos;s real
+            Sigma team membership, it asserts team context per embed. That&apos;s how you&apos;d scope a
+            multi-tenant or per-department experience without maintaining separate persistent
+            accounts for every context.
+          </InfoButton>
+        </div>
         {SWAP_TEAMS.map((team) => {
           const isActive = activeSlug === team.slug;
           return (
@@ -117,18 +128,37 @@ export default function TeamSwapSidebar() {
       {activeSlug && (
         <div className="flex-1 min-h-0 flex flex-col border-t border-black/[0.06] pt-2">
           <div className="flex items-center justify-between px-3 mb-1">
-            <p className="text-[10px] font-semibold text-ink-secondary uppercase tracking-widest">
-              Files
-            </p>
-            {create.mode === 'idle' && (
-              <button
-                onClick={() => setCreate({ mode: 'open', name: '' })}
-                title="Create a new workbook in this workspace"
-                className="text-ink-secondary hover:text-brand-600 transition-colors"
-              >
-                {plusIcon}
-              </button>
-            )}
+            <div className="flex items-center gap-1.5">
+              <p className="text-[10px] font-semibold text-ink-secondary uppercase tracking-widest">
+                Files
+              </p>
+              <InfoButton title="Live file discovery via the Sigma REST API">
+                This list isn&apos;t hardcoded — it&apos;s fetched live from Sigma&apos;s REST API
+                (<code className="text-brand-600">GET /v2/workbooks</code>), scoped to the selected
+                team&apos;s workspace. This is the pattern for letting a host application discover what
+                content actually exists for a given context, rather than wiring a fixed embed URL per
+                page.
+              </InfoButton>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <InfoButton title="Creating a workbook via workbook-as-code">
+                Creating a workbook here uses Sigma&apos;s workbook-as-code API
+                (<code className="text-brand-600">POST /v2/workbooks</code>) — a JSON definition of the
+                workbook is posted directly, provisioning it without ever opening the Sigma UI. It&apos;s
+                created as the signed-in embed user, not a service account, so who you&apos;re signed in
+                as determines whether this succeeds at all. Once created, the embed automatically
+                swaps to show it live.
+              </InfoButton>
+              {create.mode === 'idle' && (
+                <button
+                  onClick={() => setCreate({ mode: 'open', name: '' })}
+                  title="Create a new workbook in this workspace"
+                  className="text-ink-secondary hover:text-brand-600 transition-colors"
+                >
+                  {plusIcon}
+                </button>
+              )}
+            </div>
           </div>
 
           {create.mode !== 'idle' && (
