@@ -4,10 +4,12 @@ import { useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import SigmaEmbed from './SigmaEmbed';
 import ConceptDemoPage from './ConceptDemoPage';
+import InfoButton from './InfoButton';
 import { useDashboardChrome } from '@/lib/dashboard-context';
 
 const DOCS = [
   { label: 'JWT claims reference', href: 'https://help.sigmacomputing.com/docs/json-web-token-claims-reference' },
+  { label: 'Embed URL parameters', href: 'https://help.sigmacomputing.com/docs/embed-url-parameters' },
 ];
 
 const DESCRIPTION =
@@ -86,6 +88,23 @@ export default function TeamSwapView({ team, workbook, embedData, sigmaEmail, me
             once a file is loaded — nothing for them to act on before then. */}
         {workbook && (
           <div className="shrink-0 flex items-center gap-4 text-xs">
+            <InfoButton title="Showing and positioning the embed menu">
+              Both switches drive one URL parameter,{' '}
+              <code className="text-brand-600">:menu_position</code>, which accepts exactly{' '}
+              <code className="text-brand-600">top</code>, <code className="text-brand-600">bottom</code>,
+              or <code className="text-brand-600">none</code> (its default when unset). Hidden isn&apos;t
+              a position — it&apos;s <code className="text-brand-600">none</code> regardless of which
+              position was last selected, which is why the two controls here are a visibility toggle
+              plus a position choice rather than a three-way switch.
+              <a
+                href="https://help.sigmacomputing.com/docs/embed-url-parameters"
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 flex items-center gap-1 text-brand-600 hover:text-brand-700 font-medium"
+              >
+                Sigma docs: Embed URL parameters ↗
+              </a>
+            </InfoButton>
             <div className="flex items-center gap-2">
               <span className="text-ink-secondary">Menu</span>
               <button

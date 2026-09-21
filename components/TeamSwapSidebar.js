@@ -104,6 +104,14 @@ export default function TeamSwapSidebar() {
             Sigma team membership, it asserts team context per embed. That&apos;s how you&apos;d scope a
             multi-tenant or per-department experience without maintaining separate persistent
             accounts for every context.
+            <a
+              href="https://help.sigmacomputing.com/docs/json-web-token-claims-reference"
+              target="_blank"
+              rel="noreferrer"
+              className="mt-2 flex items-center gap-1 text-brand-600 hover:text-brand-700 font-medium"
+            >
+              Sigma docs: JWT claims reference ↗
+            </a>
           </InfoButton>
         </div>
         {SWAP_TEAMS.map((team) => {
@@ -138,6 +146,14 @@ export default function TeamSwapSidebar() {
                 team&apos;s workspace. This is the pattern for letting a host application discover what
                 content actually exists for a given context, rather than wiring a fixed embed URL per
                 page.
+                <a
+                  href="https://help.sigmacomputing.com/reference/list-workbooks"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 flex items-center gap-1 text-brand-600 hover:text-brand-700 font-medium"
+                >
+                  Sigma docs: List workbooks (API reference) ↗
+                </a>
               </InfoButton>
             </div>
             <div className="flex items-center gap-1.5">
@@ -147,7 +163,16 @@ export default function TeamSwapSidebar() {
                 workbook is posted directly, provisioning it without ever opening the Sigma UI. It&apos;s
                 created as the signed-in embed user, not a service account, so who you&apos;re signed in
                 as determines whether this succeeds at all. Once created, the embed automatically
-                swaps to show it live.
+                swaps to show it live. Sigma documents this capability as a{' '}
+                <span className="font-medium">public beta</span> feature.
+                <a
+                  href="https://help.sigmacomputing.com/docs/manage-workbooks-as-code"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 flex items-center gap-1 text-brand-600 hover:text-brand-700 font-medium"
+                >
+                  Sigma docs: Manage workbooks as code ↗
+                </a>
               </InfoButton>
               {create.mode === 'idle' && (
                 <button
