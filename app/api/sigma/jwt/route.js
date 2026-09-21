@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { generateSigmaEmbedUrl } from '@/lib/sigma-embed';
 import { resolveUrlParams } from '@/lib/embed-url-params';
 import { getBookmarkEntry } from '@/lib/bookmarks';
+import { getSwapTeam } from '@/lib/teams';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -33,11 +34,17 @@ export async function GET(request) {
 
   const sigmaEmail = meta.sigmaEmail || loginEmail;
   const accountType = meta.accountType;
-  const teams = meta.teams ?? [];
   const userAttributes = meta.userAttributes ?? {};
 
   const { searchParams } = new URL(request.url);
   const mode = searchParams.get('mode') || '';
+
+  // Team Swapping use case: the client asks for one of the four known teams by
+  // SLUG, and the team name is resolved here rather than accepted from the
+  // request — a client that could name its own team could assert membership in
+  // any team in the org. An unrecognized slug falls through to the Clerk value.
+  const swapTeam = getSwapTeam(searchParams.get('teamSlug'));
+  const teams = swapTeam ? [swapTeam.name] : (meta.teams ?? []);
   const urlId = searchParams.get('urlId') || undefined;
   const wantBookmark = searchParams.get('wantBookmark') === '1';
   const sessionLengthParam = searchParams.get('sessionLength');
