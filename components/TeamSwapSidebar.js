@@ -17,6 +17,14 @@ const fileIcon = (
   </svg>
 );
 
+const plusIcon = (
+  <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.5v15m7.5-7.5h-15" />
+  </svg>
+);
+
+const CREATE_IDLE = { mode: 'idle' };
+
 /**
  * Team + file picker for the Team Swapping use case.
  *
@@ -34,6 +42,7 @@ export default function TeamSwapSidebar() {
   const activeUrlId = searchParams.get('urlId');
 
   const [state, setState] = useState({ status: 'idle' });
+  const [create, setCreate] = useState(CREATE_IDLE);
 
   const load = useCallback(async (slug) => {
     setState({ status: 'loading' });
@@ -50,12 +59,34 @@ export default function TeamSwapSidebar() {
   useEffect(() => {
     if (activeSlug) load(activeSlug);
     else setState({ status: 'idle' });
+    setCreate(CREATE_IDLE);
   }, [activeSlug, load]);
 
   const selectFile = (urlId) => {
     const qs = new URLSearchParams(searchParams.toString());
     qs.set('urlId', urlId);
     router.push(`${pathname}?${qs.toString()}`);
+  };
+
+  const submitCreate = async (e) => {
+    e.preventDefault();
+    const name = (create.name || '').trim();
+    if (!name || create.mode === 'submitting') return;
+    setCreate({ mode: 'submitting', name });
+    try {
+      const res = await fetch('/api/sigma/team-workbook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ team: activeSlug, name }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to create workbook.');
+      await load(activeSlug);
+      setCreate(CREATE_IDLE);
+      selectFile(data.urlId);
+    } catch (err) {
+      setCreate({ mode: 'open', name, error: err.message });
+    }
   };
 
   return (
@@ -85,9 +116,56 @@ export default function TeamSwapSidebar() {
 
       {activeSlug && (
         <div className="flex-1 min-h-0 flex flex-col border-t border-black/[0.06] pt-2">
-          <p className="text-[10px] font-semibold text-ink-secondary uppercase tracking-widest mb-1 px-3">
-            Files
-          </p>
+          <div className="flex items-center justify-between px-3 mb-1">
+            <p className="text-[10px] font-semibold text-ink-secondary uppercase tracking-widest">
+              Files
+            </p>
+            {create.mode === 'idle' && (
+              <button
+                onClick={() => setCreate({ mode: 'open', name: '' })}
+                title="Create a new workbook in this workspace"
+                className="text-ink-secondary hover:text-brand-600 transition-colors"
+              >
+                {plusIcon}
+              </button>
+            )}
+          </div>
+
+          {create.mode !== 'idle' && (
+            <form onSubmit={submitCreate} className="px-2 pb-2 space-y-1.5">
+              <input
+                autoFocus
+                type="text"
+                value={create.name}
+                onChange={(e) => setCreate((c) => ({ ...c, name: e.target.value, error: undefined }))}
+                onKeyDown={(e) => { if (e.key === 'Escape') setCreate(CREATE_IDLE); }}
+                disabled={create.mode === 'submitting'}
+                placeholder="Workbook name"
+                className="w-full text-sm px-2 py-1.5 rounded-lg border border-black/[0.1] focus:outline-none focus:border-brand-500/50 disabled:opacity-60"
+              />
+              {create.error && (
+                <p className="text-[11px] text-red-600 leading-relaxed">{create.error}</p>
+              )}
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="submit"
+                  disabled={create.mode === 'submitting' || !create.name.trim()}
+                  className="flex-1 text-xs font-medium bg-brand-500 hover:bg-brand-600 disabled:opacity-40 disabled:cursor-not-allowed text-white px-2.5 py-1.5 rounded-lg transition-colors"
+                >
+                  {create.mode === 'submitting' ? 'Creating…' : 'Create'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCreate(CREATE_IDLE)}
+                  disabled={create.mode === 'submitting'}
+                  className="text-xs text-ink-secondary hover:text-ink-primary px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-40"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          )}
+
           <div className="flex-1 min-h-0 overflow-y-auto px-1 pb-2">
             {state.status === 'loading' && (
               <div className="p-2 space-y-1.5">
