@@ -50,7 +50,10 @@ export default async function TeamSwapPage({ searchParams }) {
         // Deliberately OVERRIDES Clerk publicMetadata.teams — swapping this one
         // claim, and watching content access follow, is the whole point here.
         teams: [team.name],
-        userAttributes: meta.userAttributes ?? {},
+        // No user attributes: these workbooks don't do attribute-driven RLS, and
+        // sending Clerk's embed_region would put a claim in the inspector that
+        // isn't doing any work — easy to mistake for the thing granting access.
+        userAttributes: {},
         urlId: workbook.urlId,
       });
     } catch (err) {

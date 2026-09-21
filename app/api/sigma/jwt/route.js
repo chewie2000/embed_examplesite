@@ -34,7 +34,6 @@ export async function GET(request) {
 
   const sigmaEmail = meta.sigmaEmail || loginEmail;
   const accountType = meta.accountType;
-  const userAttributes = meta.userAttributes ?? {};
 
   const { searchParams } = new URL(request.url);
   const mode = searchParams.get('mode') || '';
@@ -45,6 +44,11 @@ export async function GET(request) {
   // any team in the org. An unrecognized slug falls through to the Clerk value.
   const swapTeam = getSwapTeam(searchParams.get('teamSlug'));
   const teams = swapTeam ? [swapTeam.name] : (meta.teams ?? []);
+  // Those workbooks don't use attribute-driven RLS. Kept in step with the
+  // server-rendered JWT in app/dashboard/team-swap/page.js so a client refetch
+  // (retry, session-length regenerate) doesn't quietly produce different claims
+  // than the page first loaded with.
+  const userAttributes = swapTeam ? {} : (meta.userAttributes ?? {});
   const urlId = searchParams.get('urlId') || undefined;
   const wantBookmark = searchParams.get('wantBookmark') === '1';
   const sessionLengthParam = searchParams.get('sessionLength');
