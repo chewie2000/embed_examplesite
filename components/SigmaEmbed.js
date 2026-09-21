@@ -15,7 +15,7 @@ const BOOKMARK_ACTION_DELAY_MS = 700;
 export default function SigmaEmbed({
   mode = '', urlId, label, onJwt, initialEmbedUrl, initialJwt, sessionLength, refreshKey = 0,
   showModeToggle = false, initialBookmarkId = null, autoExplore = false, onBookmarkChange, onBookmarkDeleted,
-  teamSlug,
+  teamSlug, menuVisible, menuPosition,
 }) {
   // Distinct key for ad hoc content-browser embeds (discovered urlId) vs the
   // pre-configured {mode}_SIGMA_BASE_URL examples — used for onJwt/inspector keying.
@@ -338,6 +338,10 @@ export default function SigmaEmbed({
         // refetch (retry, or a session-length regenerate) would rebuild the JWT
         // from Clerk metadata and silently drop the selected team.
         if (teamSlug) params.set('teamSlug', teamSlug);
+        // Team Swapping's interactive menu switches — only meaningful together
+        // with teamSlug, since that's what tells the server to honor them at all.
+        if (menuVisible !== undefined) params.set('menu', menuVisible ? '1' : '0');
+        if (menuPosition) params.set('pos', menuPosition);
         const qs = params.toString();
         const res = await fetch(`/api/sigma/jwt${qs ? `?${qs}` : ''}`);
         const data = await res.json();
@@ -351,7 +355,7 @@ export default function SigmaEmbed({
       }
     }
     fetchEmbedUrl();
-  }, [mode, urlId, autoExplore, teamSlug, sessionLength, refreshKey, localRefreshKey]);
+  }, [mode, urlId, autoExplore, teamSlug, menuVisible, menuPosition, sessionLength, refreshKey, localRefreshKey]);
 
   // Progressive loading warning during JWT fetch
   useEffect(() => {

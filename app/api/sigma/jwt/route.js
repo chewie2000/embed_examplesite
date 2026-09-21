@@ -1,7 +1,7 @@
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { generateSigmaEmbedUrl } from '@/lib/sigma-embed';
-import { resolveUrlParams, MENU_BAR_TOP } from '@/lib/embed-url-params';
+import { resolveUrlParams, resolveMenuState, menuStateUrlParams } from '@/lib/embed-url-params';
 import { getBookmarkEntry } from '@/lib/bookmarks';
 import { getSwapTeam } from '@/lib/teams';
 
@@ -61,7 +61,7 @@ export async function GET(request) {
     // match what app/dashboard/team-swap/page.js signed so a client refetch
     // doesn't drop the menu mid-demo.
     const urlParams = swapTeam
-      ? { ...MENU_BAR_TOP }
+      ? menuStateUrlParams(resolveMenuState({ menu: searchParams.get('menu'), pos: searchParams.get('pos') }))
       : (urlId ? {} : resolveUrlParams(meta, mode));
 
     // Look up the bookmark server-side (never trust a client-supplied id) —

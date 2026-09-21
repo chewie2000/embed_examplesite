@@ -1,7 +1,7 @@
 import { currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { generateSigmaEmbedUrl } from '@/lib/sigma-embed';
-import { MENU_BAR_TOP } from '@/lib/embed-url-params';
+import { resolveMenuState, menuStateUrlParams } from '@/lib/embed-url-params';
 import { findWorkbookInWorkspace, resolveMemberByEmail } from '@/lib/sigma-api';
 import { getSwapTeam } from '@/lib/teams';
 import TeamSwapView from '@/components/TeamSwapView';
@@ -11,8 +11,9 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function TeamSwapPage({ searchParams }) {
-  const { team: slug } = await searchParams;
+  const { team: slug, menu, pos } = await searchParams;
   const team = getSwapTeam(slug);
+  const menuState = resolveMenuState({ menu, pos });
 
   const user = await currentUser();
   if (!user) redirect('/sign-in');
@@ -21,7 +22,7 @@ export default async function TeamSwapPage({ searchParams }) {
   const sigmaEmail = meta.sigmaEmail || user.emailAddresses[0]?.emailAddress;
 
   if (!team) {
-    return <TeamSwapView team={null} sigmaEmail={sigmaEmail} />;
+    return <TeamSwapView team={null} sigmaEmail={sigmaEmail} menuState={menuState} />;
   }
 
   let workbook = null;
@@ -56,9 +57,7 @@ export default async function TeamSwapPage({ searchParams }) {
         // isn't doing any work — easy to mistake for the thing granting access.
         userAttributes: {},
         urlId: workbook.urlId,
-        // Show the workbook menu bar at the top, matching the internal-user
-        // legacy example.
-        urlParams: MENU_BAR_TOP,
+        urlParams: menuStateUrlParams(menuState),
       });
     } catch (err) {
       error = err.message;
@@ -73,6 +72,7 @@ export default async function TeamSwapPage({ searchParams }) {
       sigmaEmail={sigmaEmail}
       memberType={member?.memberType ?? null}
       error={error}
+      menuState={menuState}
     />
   );
 }
