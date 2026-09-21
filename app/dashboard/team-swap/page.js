@@ -2,7 +2,7 @@ import { currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { generateSigmaEmbedUrl } from '@/lib/sigma-embed';
 import { resolveMenuState, menuStateUrlParams } from '@/lib/embed-url-params';
-import { findWorkbookInWorkspace, resolveMemberByEmail } from '@/lib/sigma-api';
+import { listWorkbooksInWorkspace, resolveMemberByEmail } from '@/lib/sigma-api';
 import { getSwapTeam } from '@/lib/teams';
 import TeamSwapView from '@/components/TeamSwapView';
 
@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function TeamSwapPage({ searchParams }) {
-  const { team: slug, menu, pos } = await searchParams;
+  const { team: slug, urlId, menu, pos } = await searchParams;
   const team = getSwapTeam(slug);
   const menuState = resolveMenuState({ menu, pos });
 
@@ -25,22 +25,41 @@ export default async function TeamSwapPage({ searchParams }) {
     return <TeamSwapView team={null} sigmaEmail={sigmaEmail} menuState={menuState} />;
   }
 
-  let workbook = null;
+  let files = null;
   let member = null;
   let error = null;
 
   try {
-    // Resolved live rather than configured, so re-copying the workbooks doesn't
-    // strand this page on stale ids.
-    [workbook, member] = await Promise.all([
-      findWorkbookInWorkspace(team.name),
+    // Resolved live rather than configured, so re-copying/adding workbooks
+    // doesn't strand this page on stale ids. Same list the sidebar fetches
+    // independently (it can't see this page's props — see the note in
+    // app/api/sigma/team-files/route.js) — doubles as validating that urlId
+    // actually belongs to this team's workspace, not just an arbitrary id.
+    [files, member] = await Promise.all([
+      listWorkbooksInWorkspace(team.name),
       resolveMemberByEmail(sigmaEmail),
     ]);
-    if (!workbook) {
-      error = `No workbook found in the "${team.name}" workspace.`;
-    }
   } catch (err) {
     error = err.message;
+  }
+
+  // Team picked, no file yet — show the picker state, no embed. This is the
+  // normal resting state after switching teams, not an error.
+  if (!urlId && !error) {
+    return (
+      <TeamSwapView
+        team={team}
+        sigmaEmail={sigmaEmail}
+        memberType={member?.memberType ?? null}
+        menuState={menuState}
+      />
+    );
+  }
+
+  const found = urlId ? files?.find((f) => f.urlId === urlId) ?? null : null;
+  const workbook = found ? { ...found, workspace: team.name } : null;
+  if (urlId && !workbook && !error) {
+    error = `"${urlId}" isn't a file in the "${team.name}" workspace.`;
   }
 
   let embedData = null;

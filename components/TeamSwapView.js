@@ -11,7 +11,7 @@ const DOCS = [
 ];
 
 const DESCRIPTION =
-  "Sigma resolves an embed user's content access from their team membership, and the JWT's teams claim is what asserts that membership for the session. Each team below owns a workspace holding its own copy of the same workbook. Pick a team and the JWT is re-signed with only that team — so the workbook you see is one this user can only reach through that team's grant.";
+  "Sigma resolves an embed user's content access from their team membership, and the JWT's teams claim is what asserts that membership for the session. Each team below owns its own workspace. Pick a team, then pick a file from that workspace — the JWT is re-signed with only that team, so anything you can open is something this user can only reach through that team's grant.";
 
 export default function TeamSwapView({ team, workbook, embedData, sigmaEmail, memberType, error, menuState }) {
   const { setJwt, clearJwts, setPageTitle, sessionLength, refreshKey } = useDashboardChrome();
@@ -83,8 +83,8 @@ export default function TeamSwapView({ team, workbook, embedData, sigmaEmail, me
             (verified against Sigma's embed URL parameters reference); modeled
             as one visibility toggle plus a position choice rather than a
             three-way selector, since "hidden" isn't a position. Only shown
-            once a team is selected — nothing for them to act on before then. */}
-        {team && (
+            once a file is loaded — nothing for them to act on before then. */}
+        {workbook && (
           <div className="shrink-0 flex items-center gap-4 text-xs">
             <div className="flex items-center gap-2">
               <span className="text-ink-secondary">Menu</span>
@@ -130,6 +130,10 @@ export default function TeamSwapView({ team, workbook, embedData, sigmaEmail, me
           {!team ? (
             <div className="flex-1 flex items-center justify-center p-8">
               <p className="text-sm text-ink-secondary">Pick a team from the left to begin.</p>
+            </div>
+          ) : !error && !workbook ? (
+            <div className="flex-1 flex items-center justify-center p-8">
+              <p className="text-sm text-ink-secondary">Select a file from the left to load it.</p>
             </div>
           ) : error ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-3 p-8 text-center">
