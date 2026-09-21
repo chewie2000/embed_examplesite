@@ -22,7 +22,7 @@ export default function BrowseWorkbookPage() {
   const { urlId } = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { setJwt, setPageTitle, sessionLength, refreshKey, bumpTreeRefresh } = useDashboardChrome();
+  const { setJwt, clearJwts, setPageTitle, sessionLength, refreshKey, bumpTreeRefresh } = useDashboardChrome();
 
   const name = searchParams.get('name') || 'Workbook';
   const bookmarkId = searchParams.get('bookmark') || null;
@@ -32,6 +32,10 @@ export default function BrowseWorkbookPage() {
   useEffect(() => {
     setPageTitle(name);
   }, [name, setPageTitle]);
+
+  // Cleanup fires when the opened workbook changes or we leave — clearing the
+  // previous workbook's JWT without racing the next one's registration.
+  useEffect(() => clearJwts, [clearJwts, urlId, bookmarkId]);
 
   const handleBookmarkChange = useCallback(() => {
     bumpTreeRefresh();

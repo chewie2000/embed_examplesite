@@ -11,11 +11,16 @@ import { useDashboardChrome } from '@/lib/dashboard-context';
  * exactly — this just gives each one a real URL instead of client-state.
  */
 export default function LegacyExampleView({ example, initialEmbedData }) {
-  const { setJwt, setPageTitle, sessionLength, refreshKey } = useDashboardChrome();
+  const { setJwt, clearJwts, setPageTitle, sessionLength, refreshKey } = useDashboardChrome();
 
   useEffect(() => {
     setPageTitle(example.title);
   }, [example.title, setPageTitle]);
+
+  // Drop this page's JWT from the inspector as we leave, rather than having
+  // the provider wipe on navigation — a wipe there races the embed's own
+  // registration on mount and wins, leaving the inspector empty.
+  useEffect(() => clearJwts, [clearJwts]);
 
   return (
     <ConceptDemoPage
