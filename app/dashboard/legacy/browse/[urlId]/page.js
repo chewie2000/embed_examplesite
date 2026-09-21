@@ -6,13 +6,17 @@ import SigmaEmbed from '@/components/SigmaEmbed';
 import { useDashboardChrome } from '@/lib/dashboard-context';
 
 /**
- * A workbook (or bookmark) opened from the sidebar Content Browser tree —
- * dynamic, user-picked content discovered via the Sigma REST API, rather
- * than one of the curated LEGACY_EXAMPLES. Everything needed to reconstruct
- * the view travels in the URL (name/bookmark/auto/parent as query params) so
- * this, like every other use case now, is a real bookmarkable/shareable
- * route rather than client-state — a refresh here lands you back exactly
- * where you were, which the old tree-view overlay could never do.
+ * A workbook (or bookmark) opened from the Content Browser tree — dynamic,
+ * user-picked content discovered via the Sigma REST API, rather than one of
+ * the curated LEGACY_EXAMPLES. Sits under /dashboard/legacy because the
+ * Content Browser itself is part of the Legacy Examples use case, so this
+ * route inherits that sidebar.
+ *
+ * Everything needed to reconstruct the view travels in the URL
+ * (name/bookmark/auto/parent as query params), so this is a real
+ * bookmarkable/shareable route rather than client-state — a refresh here
+ * lands you back exactly where you were, which the old tree-view overlay
+ * could never do.
  */
 export default function BrowseWorkbookPage() {
   const { urlId } = useParams();
@@ -39,7 +43,7 @@ export default function BrowseWorkbookPage() {
   const handleBookmarkDeleted = useCallback(() => {
     bumpTreeRefresh();
     const qs = new URLSearchParams({ name: parentName });
-    router.replace(`/dashboard/browse/${urlId}?${qs.toString()}`);
+    router.replace(`/dashboard/legacy/browse/${urlId}?${qs.toString()}`);
   }, [bumpTreeRefresh, parentName, router, urlId]);
 
   return (

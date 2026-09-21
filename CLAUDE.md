@@ -71,13 +71,17 @@ Browser
   │
   ├── /dashboard/layout.js
   │     └── Clerk auth check → DashboardProvider (lib/dashboard-context.js)
-  │           → DashboardChrome (top nav, sidebar nav links, Content Browser, JWT inspector)
+  │           → DashboardChrome (top nav + JWT inspector ONLY — no sidebar)
   │
-  ├── GET /dashboard                     → redirects to the default use case (placeholder until
-  │                                          the use-case gallery, embed_examplesite-0so.6, lands here)
-  ├── GET /dashboard/legacy/[slug]        → LEGACY_EXAMPLES entry (lib/legacy-examples.js) rendered
-  │                                          via components/LegacyExampleView.js
-  ├── GET /dashboard/browse/[urlId]       → workbook opened from the Content Browser sidebar tree;
+  ├── GET /dashboard                      → the use-case gallery: cards from lib/use-cases.js
+  │
+  ├── /dashboard/legacy/layout.js         → adds LegacySidebar (example switcher + Content Browser)
+  │     │                                    — that panel belongs to THIS use case, not all routes
+  │     ├── GET /dashboard/legacy          → redirects to the first example
+  │     ├── GET /dashboard/legacy/[slug]   → LEGACY_EXAMPLES entry (lib/legacy-examples.js) rendered
+  │     │                                    via components/LegacyExampleView.js
+  │     └── GET /dashboard/legacy/browse/[urlId]
+  │                                        → workbook opened from the Content Browser tree;
   │                                          name/bookmark/auto/parent travel as query params so this
   │                                          route is itself bookmarkable/shareable
   │
@@ -85,6 +89,8 @@ Browser
         └── Verifies session → lib/sigma-embed.js signs JWT with SIGMA_SECRET
               └── Returns signed embed URL → SigmaEmbed renders iframe
 ```
+
+Each route composes its own body row via `components/UseCaseMain.js` (utility bar + scroll area), so a use case can bring its own sidebar/controls without every other route inheriting them.
 
 Pages register their active embed's JWT and page title with the shared chrome via `useDashboardChrome()` (from `lib/dashboard-context.js`) — the JWT inspector and top-nav breadcrumb live in the layout, not the page, so this is how a page's content reaches them.
 
@@ -95,10 +101,14 @@ Pages register their active embed's JWT and page title with the shared chrome vi
 | `middleware.js` | Protects `/dashboard(.*)` — redirects unauthenticated users to `/sign-in` |
 | `app/dashboard/layout.js` | Clerk auth check, wraps every `/dashboard/*` route in `DashboardProvider` + `DashboardChrome` |
 | `lib/dashboard-context.js` | Cross-route shared state: JWTs (for the inspector), page title, session-length override, Content Browser refresh signal |
-| `components/DashboardChrome.js` | Persistent top nav + sidebar (use-case links + Content Browser) + JWT inspector mount |
+| `components/DashboardChrome.js` | Global chrome only — top nav + JWT inspector mount. No sidebar by design |
+| `components/UseCaseMain.js` | Main content column (utility bar + scroll area) each route composes into the body row |
+| `lib/use-cases.js` | Cards shown on the `/dashboard` gallery — append here as new demo pages get built |
+| `app/dashboard/legacy/layout.js` | Adds `LegacySidebar` to every Legacy Examples route |
+| `components/LegacySidebar.js` | Legacy Examples' own left panel — example switcher + Content Browser tree |
 | `lib/legacy-examples.js` | Config for the two pre-existing demo pages bundled as "Legacy Examples" |
 | `components/LegacyExampleView.js` | Renders one `LEGACY_EXAMPLES` entry via `ConceptDemoPage` + `SigmaEmbed` |
-| `app/dashboard/browse/[urlId]/page.js` | Renders a workbook opened from the Content Browser tree |
+| `app/dashboard/legacy/browse/[urlId]/page.js` | Renders a workbook opened from the Content Browser tree |
 | `app/api/sigma/jwt/route.js` | Verifies session, calls `sigma-embed.js`, returns signed URL |
 | `lib/sigma-embed.js` | Builds JWT payload and signs embed URL (HMAC-SHA256 via `jose`) |
 | `lib/sigma-api.js` | Sigma **REST API** helper — OAuth token exchange + builds the embed user's EMBED-workspace tree (distinct from embed JWT signing) |
@@ -116,11 +126,11 @@ Pages register their active embed's JWT and page title with the shared chrome vi
 ### Adding a new use-case page
 
 1. Add env var in Vercel: `SALES_SIGMA_BASE_URL=https://app.sigmacomputing.com/...`
-2. Create `app/dashboard/<slug>/page.js` — fetch the Clerk user + `generateSigmaEmbedUrl({ mode: 'sales', ... })` server-side, then render a client view through `components/ConceptDemoPage.js` (see `components/LegacyExampleView.js` for the pattern), calling `useDashboardChrome().setJwt(...)`/`setPageTitle(...)` so the JWT inspector and breadcrumb pick it up.
-3. Add a link to it in `NAV_LINKS` in `components/DashboardChrome.js`.
+2. Create `app/dashboard/<slug>/page.js` — fetch the Clerk user + `generateSigmaEmbedUrl({ mode: 'sales', ... })` server-side, then render a client view through `components/ConceptDemoPage.js` (see `components/LegacyExampleView.js` for the pattern), calling `useDashboardChrome().setJwt(...)`/`setPageTitle(...)` so the JWT inspector and breadcrumb pick it up. Wrap the body in `components/UseCaseMain.js`; if the use case needs its own sidebar or controls, add a `layout.js` beside the page that renders them next to `UseCaseMain` (see `app/dashboard/legacy/layout.js`) rather than adding them to `DashboardChrome`.
+3. Add a card for it to `USE_CASES` in `lib/use-cases.js` so it appears on the gallery.
 4. Push — Vercel picks it up automatically.
 
-Note: `embed_examplesite-ibp.2` (central registry of demo-page config) will likely replace steps 2–3 with a single declarative entry once it lands — this manual version is today's pattern, not the intended end state.
+Note: `embed_examplesite-ibp.2` (central registry of demo-page config) will likely collapse steps 2–3 into a single declarative entry once it lands — this manual version is today's pattern, not the intended end state.
 
 ### Content Browser (REST API) section
 

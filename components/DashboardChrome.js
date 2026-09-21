@@ -1,49 +1,35 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { UserButton } from '@clerk/nextjs';
-import ContentTree from './ContentTree';
 import JwtInspector from './JwtInspector';
 import ExpiryBadge from './ExpiryBadge';
 import { useDashboardChrome } from '@/lib/dashboard-context';
-import { LEGACY_EXAMPLES } from '@/lib/legacy-examples';
 
-const NAV_LINKS = LEGACY_EXAMPLES.map((e) => ({
-  href: `/dashboard/legacy/${e.slug}`,
-  label: e.title,
-  icon: (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-    </svg>
-  ),
-}));
+// Breadcrumb prefix per area of the dashboard. The page itself supplies the
+// second half via setPageTitle().
+function sectionLabel(pathname) {
+  if (pathname.startsWith('/dashboard/legacy/browse/')) return 'Content Browser';
+  if (pathname.startsWith('/dashboard/legacy')) return 'Legacy Examples';
+  return 'Use Cases';
+}
 
+/**
+ * Chrome shared by every /dashboard route: top nav and the JWT inspector.
+ *
+ * Deliberately does NOT include a sidebar — the example switcher and Content
+ * Browser belong to the Legacy Examples use case (see LegacySidebar), not to
+ * every route. Each route composes its own body row, so the gallery can be a
+ * clean full-width grid while Legacy Examples gets its left panel.
+ */
 export default function DashboardChrome({ user, children }) {
-  const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const {
     jwts, pageTitle,
     inspectorOpen, setInspectorOpen,
     sessionLength, regenerate,
-    treeRefreshSignal,
   } = useDashboardChrome();
-
-  const isBrowseView = pathname.startsWith('/dashboard/browse/');
-  const browseUrlId = isBrowseView ? pathname.split('/dashboard/browse/')[1] : undefined;
-  const browseBookmarkId = searchParams.get('bookmark') || undefined;
-
-  const handleSelectWorkbook = (node) => {
-    const qs = new URLSearchParams({ name: node.name });
-    router.push(`/dashboard/browse/${node.urlId}?${qs.toString()}`);
-  };
-
-  const handleSelectBookmark = (node) => {
-    const qs = new URLSearchParams({ name: node.name, bookmark: node.bookmarkId, auto: '1' });
-    if (node.parentName) qs.set('parent', node.parentName);
-    router.push(`/dashboard/browse/${node.urlId}?${qs.toString()}`);
-  };
 
   const inspectorEmbeds = Object.entries(jwts).map(([mode, v]) => ({ mode, label: v.label }));
 
@@ -63,11 +49,17 @@ export default function DashboardChrome({ user, children }) {
         <div className="h-5 w-px bg-black/10" />
 
         <div className="flex items-center gap-2 text-sm">
-          <span className="text-ink-secondary">{isBrowseView ? 'Content Browser' : 'Analytics'}</span>
-          <svg className="w-3 h-3 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-          <span className="text-ink-primary font-medium">{pageTitle}</span>
+          <Link href="/dashboard" className="text-ink-secondary hover:text-ink-primary transition-colors">
+            {sectionLabel(pathname)}
+          </Link>
+          {pageTitle && (
+            <>
+              <svg className="w-3 h-3 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+              <span className="text-ink-primary font-medium">{pageTitle}</span>
+            </>
+          )}
         </div>
 
         <div className="flex-1" />
@@ -102,81 +94,9 @@ export default function DashboardChrome({ user, children }) {
         </div>
       </header>
 
-      {/* ── Body ── */}
+      {/* ── Body — each route supplies its own layout (sidebar or not) ── */}
       <div className="flex flex-1 overflow-hidden">
-
-        {/* ── Sidebar ── */}
-        <aside className="w-64 shrink-0 border-r border-black/[0.06] bg-white flex flex-col">
-          <div className="p-3 gap-0.5 flex flex-col shrink-0">
-            <p className="text-[10px] font-semibold text-ink-secondary uppercase tracking-widest mb-2 px-2 pt-1">
-              Analytics
-            </p>
-            {NAV_LINKS.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg text-sm transition-all ${
-                    isActive
-                      ? 'bg-brand-50 text-brand-600 border border-brand-500/20'
-                      : 'text-ink-secondary hover:text-ink-primary hover:bg-black/[0.03] border border-transparent'
-                  }`}
-                >
-                  <span className={isActive ? 'text-brand-500' : 'text-zinc-400'}>
-                    {item.icon}
-                  </span>
-                  {item.label}
-                </Link>
-              );
-            })}
-          </div>
-
-          {/* Content Browser — persistent tree, scoped to the logged-in embed user via the Sigma REST API */}
-          <div className="flex-1 min-h-0 flex flex-col border-t border-black/[0.06] pt-2">
-            <p className="text-[10px] font-semibold text-ink-secondary uppercase tracking-widest mb-1 px-3">
-              Content Browser
-            </p>
-            <div className="flex-1 min-h-0 overflow-y-auto px-1 pb-2">
-              <ContentTree
-                compact
-                selectedUrlId={isBrowseView && !browseBookmarkId ? browseUrlId : undefined}
-                selectedBookmarkId={isBrowseView ? browseBookmarkId : undefined}
-                onSelectWorkbook={handleSelectWorkbook}
-                onSelectBookmark={handleSelectBookmark}
-                refreshSignal={treeRefreshSignal}
-              />
-            </div>
-          </div>
-        </aside>
-
-        {/* ── Main ── */}
-        <main className="flex-1 flex flex-col overflow-hidden p-4 gap-3">
-
-          {/* Utility bar — kept separate from the page content below so it
-              stays put regardless of which route is active. */}
-          <div className="flex items-center justify-end gap-2 shrink-0">
-            {pathname !== '/dashboard' && (
-              <button
-                onClick={() => router.push('/dashboard')}
-                className="flex items-center gap-1.5 text-xs text-ink-secondary hover:text-ink-primary border border-black/[0.06] hover:border-black/[0.14] rounded-lg px-3 py-1.5 transition-all"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-                </svg>
-                Back to use cases
-              </button>
-            )}
-            <div className="flex items-center gap-1.5 text-xs text-ink-secondary border border-black/[0.06] rounded-lg px-3 py-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-mint-500 animate-pulse" />
-              Live
-            </div>
-          </div>
-
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            {children}
-          </div>
-        </main>
+        {children}
       </div>
 
       <JwtInspector

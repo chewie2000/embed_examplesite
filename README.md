@@ -29,12 +29,16 @@ This is not a template or a starter kit — it's a working demonstration of a re
 Browser
   │
   ├── /dashboard/layout.js
-  │     └── Clerk middleware verifies session → DashboardChrome (persistent
-  │           top nav, sidebar, Content Browser, JWT inspector)
+  │     └── Clerk middleware verifies session → DashboardChrome
+  │           (global chrome: top nav + JWT inspector)
   │
-  ├── GET /dashboard/legacy/[slug]  or  /dashboard/browse/[urlId]
-  │     └── Each use case is its own real, bookmarkable route — content only,
-  │           chrome comes from the shared layout above
+  ├── GET /dashboard
+  │     └── Use-case gallery — pick what to demo (lib/use-cases.js)
+  │
+  ├── GET /dashboard/legacy/[slug]  ·  /dashboard/legacy/browse/[urlId]
+  │     └── Legacy Examples — real bookmarkable routes, with this use case's
+  │           own sidebar (example switcher + Content Browser) from
+  │           app/dashboard/legacy/layout.js
   │
   ├── GET /api/sigma/jwt?mode=<mode> | ?urlId=<urlId>&wantBookmark=1
   │     └── Server verifies Clerk session → signs JWT with SIGMA_SECRET
@@ -198,15 +202,17 @@ flowchart TD
 
 ## Adding a new use-case page
 
-Each use case is a real route under `/dashboard`, sharing one persistent layout (top nav, sidebar, Content Browser, JWT inspector) rather than client-state in a single component.
+Each use case is a real route under `/dashboard`. Global chrome (top nav, JWT inspector) comes from `app/dashboard/layout.js`; anything else — a sidebar, controls, extra panels — belongs to the use case itself, so one demo's furniture never leaks onto another's.
 
 1. **Add the env var in Vercel** — e.g. `SALES_SIGMA_BASE_URL=https://app.sigmacomputing.com/your-org/workbook/...`
 
-2. **Add a route** — `app/dashboard/<slug>/page.js`, fetching the Clerk user and calling `generateSigmaEmbedUrl({ mode: 'sales', ... })` server-side (see `app/dashboard/legacy/[slug]/page.js` for the pattern), then rendering a client view through `components/ConceptDemoPage.js` (see `components/LegacyExampleView.js`). Call `useDashboardChrome().setJwt(...)` / `setPageTitle(...)` so the JWT inspector and breadcrumb pick it up.
+2. **Add a route** — `app/dashboard/<slug>/page.js`, fetching the Clerk user and calling `generateSigmaEmbedUrl({ mode: 'sales', ... })` server-side (see `app/dashboard/legacy/[slug]/page.js` for the pattern), then rendering a client view through `components/ConceptDemoPage.js` (see `components/LegacyExampleView.js`). Wrap the body in `components/UseCaseMain.js`, and call `useDashboardChrome().setJwt(...)` / `setPageTitle(...)` so the JWT inspector and breadcrumb pick it up.
 
-3. **Add a link** in `NAV_LINKS` in `components/DashboardChrome.js`.
+3. **Add a card** to `USE_CASES` in `lib/use-cases.js` so it shows up on the gallery.
 
-4. **Push to deploy** — Vercel picks up the new env var and route automatically.
+4. **Need its own sidebar or controls?** Add a `layout.js` beside the page rendering them next to `UseCaseMain` — see `app/dashboard/legacy/layout.js`, which is how Legacy Examples gets its example switcher and Content Browser.
+
+5. **Push to deploy** — Vercel picks up the new env var and route automatically.
 
 The `mode` string maps to `{MODE}_SIGMA_BASE_URL` — so `mode: 'sales'` reads `SALES_SIGMA_BASE_URL`.
 
@@ -346,9 +352,12 @@ embed_examplesite/
 │   │       └── tree/route.js       # Content Browser tree via the Sigma REST API
 │   ├── dashboard/
 │   │   ├── layout.js               # Auth check + DashboardProvider + DashboardChrome
-│   │   ├── page.js                 # Redirects to the default use case (placeholder until the gallery lands)
-│   │   ├── legacy/[slug]/page.js   # The two pre-existing demo pages, bundled as "Legacy Examples"
-│   │   └── browse/[urlId]/page.js  # A workbook opened from the Content Browser tree
+│   │   ├── page.js                 # Use-case gallery (the landing page)
+│   │   └── legacy/
+│   │       ├── layout.js           # Adds LegacySidebar to every Legacy Examples route
+│   │       ├── page.js             # Redirects to the first example
+│   │       ├── [slug]/page.js      # The two pre-existing demo pages
+│   │       └── browse/[urlId]/page.js  # A workbook opened from the Content Browser tree
 │   ├── interested/page.js          # Public anonymous embed page (no sign-on)
 │   ├── login/page.js               # Redirects to /sign-in
 │   ├── sign-in/[[...sign-in]]/page.js
@@ -357,7 +366,9 @@ embed_examplesite/
 │   ├── layout.js                   # Root layout + Inter font
 │   └── globals.css                 # Tailwind base + custom utilities
 ├── components/
-│   ├── DashboardChrome.js          # Persistent top nav, sidebar (incl. Content Browser), JWT inspector mount
+│   ├── DashboardChrome.js          # Global chrome only — top nav + JWT inspector mount
+│   ├── UseCaseMain.js              # Main content column each route composes into the body row
+│   ├── LegacySidebar.js            # Legacy Examples' own panel — example switcher + Content Browser
 │   ├── ConceptDemoPage.js          # Shared template — badge, title, description, docs links, content slot
 │   ├── LegacyExampleView.js        # Renders one lib/legacy-examples.js entry through ConceptDemoPage
 │   ├── SigmaEmbed.js               # Fetches JWT, renders iframe, bookmark Save/Update/Delete UI
@@ -367,6 +378,7 @@ embed_examplesite/
 │   └── ExpiryBadge.js              # Live JWT expiry countdown
 ├── lib/
 │   ├── dashboard-context.js        # Cross-route shared state for the dashboard chrome (JWTs, page title, tree refresh)
+│   ├── use-cases.js                # Cards shown on the /dashboard gallery
 │   ├── legacy-examples.js          # Config for the two pre-existing demo pages
 │   ├── sigma-embed.js              # JWT generation and embed URL construction (incl. :bookmark)
 │   ├── sigma-api.js                # Sigma REST API client — org tree, member file grants
