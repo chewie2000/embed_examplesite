@@ -149,11 +149,17 @@ export default function TeamSwapView({ team, workbook, embedData, sigmaEmail, me
             </div>
           ) : (
             <SigmaEmbed
-              // Keyed per team AND menu state so each change genuinely remounts
-              // the iframe — SigmaEmbed seeds its embed URL on mount only, so
-              // an in-place prop update would keep showing the previous
-              // team's/menu setting's workbook.
-              key={`${team.slug}:${menuState.visible}:${menuState.position}`}
+              // Keyed per team, FILE, and menu state so each change genuinely
+              // remounts the iframe — SigmaEmbed seeds its embed URL on mount
+              // only, so an in-place prop update (e.g. switching between two
+              // existing files in the same team, or auto-selecting a newly
+              // created workbook) would otherwise keep showing whatever was
+              // there before, since its skip-refetch guard doesn't look at
+              // urlId at all. workbook.urlId was missing here originally —
+              // team-switching alone happened to always change something
+              // else in this key too, which hid the gap until same-team file
+              // switching surfaced it.
+              key={`${team.slug}:${workbook.urlId}:${menuState.visible}:${menuState.position}`}
               urlId={workbook.urlId}
               label={`${team.name} — ${workbook.name}`}
               teamSlug={team.slug}
