@@ -1,4 +1,7 @@
-const BADGE_TONE = {
+// Exported so other pieces of chrome (e.g. the /dashboard use-case gallery
+// cards) that show the same badge concept can reuse this exact styling
+// instead of re-deriving it.
+export const BADGE_TONE = {
   info: 'border-brand-500/25 bg-brand-50 text-brand-600',
   beta: 'border-amber-300 bg-amber-50 text-amber-700',
   live: 'border-mint-border/40 bg-mint-400/10 text-mint-ink',
@@ -7,8 +10,8 @@ const BADGE_TONE = {
 /**
  * Shared layout for every "concept demo" page — a realistic-looking page that
  * demonstrates one Sigma embed capability, rather than a bare embed dropped on
- * a blank page. Used both for standalone routes (e.g. /interested) and for the
- * active NAV_ITEMS entry inside DashboardShell's main content area.
+ * a blank page. Used both for standalone routes (e.g. /interested) and for
+ * every use-case route under /dashboard (e.g. LegacyExampleView).
  *
  * Deliberately does NOT render page chrome (top nav, footer, sidebar) — that
  * varies per call site (a public page vs. the logged-in dashboard). This is

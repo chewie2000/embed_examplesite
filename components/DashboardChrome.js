@@ -156,7 +156,7 @@ export default function DashboardChrome({ user, children }) {
           {/* Utility bar — kept separate from the page content below so it
               stays put regardless of which route is active. */}
           <div className="flex items-center justify-end gap-2 shrink-0">
-            {isBrowseView && (
+            {pathname !== '/dashboard' && (
               <button
                 onClick={() => router.push('/dashboard')}
                 className="flex items-center gap-1.5 text-xs text-ink-secondary hover:text-ink-primary border border-black/[0.06] hover:border-black/[0.14] rounded-lg px-3 py-1.5 transition-all"
