@@ -28,8 +28,13 @@ This is not a template or a starter kit — it's a working demonstration of a re
 ```
 Browser
   │
-  ├── GET /dashboard
-  │     └── Clerk middleware verifies session → renders DashboardShell
+  ├── /dashboard/layout.js
+  │     └── Clerk middleware verifies session → DashboardChrome (persistent
+  │           top nav, sidebar, Content Browser, JWT inspector)
+  │
+  ├── GET /dashboard/legacy/[slug]  or  /dashboard/browse/[urlId]
+  │     └── Each use case is its own real, bookmarkable route — content only,
+  │           chrome comes from the shared layout above
   │
   ├── GET /api/sigma/jwt?mode=<mode> | ?urlId=<urlId>&wantBookmark=1
   │     └── Server verifies Clerk session → signs JWT with SIGMA_SECRET
@@ -88,7 +93,7 @@ SIGMA_API_BASE_URL=
 CLERK_SECRET_KEY=
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
 
-# Add one per nav section in DashboardShell.js NAV_ITEMS.
+# Add one per new use-case page (see "Adding a new use-case page" below).
 # Example: { mode: 'sales' } → SALES_SIGMA_BASE_URL
 # SALES_SIGMA_BASE_URL=
 
@@ -180,7 +185,7 @@ flowchart TD
     DeleteWait -->|"No — self-heal<br/>(intent was removal anyway)"| DeleteProceed
     DeleteWait -->|"Yes: workbook:bookmark:ondelete"| DeleteProceed["POST /api/bookmarks<br/>{urlId, bookmarkId: null}"]
     DeleteProceed --> ClerkWriteD["Clerk delta patch:<br/>privateMetadata.bookmarks[urlId] = null<br/>(removes key via deep merge)"]
-    ClerkWriteD --> NavBack["DashboardShell resets to<br/>plain parent workbook (fresh remount)"]
+    ClerkWriteD --> NavBack["Router replaces the URL with<br/>the plain parent workbook route"]
     NavBack --> TreeRefreshD["Tree refetches — bookmark<br/>row disappears"]
 
     %% Error path
@@ -191,22 +196,19 @@ flowchart TD
 
 ---
 
-## Adding a new embedded workbook
+## Adding a new use-case page
+
+Each use case is a real route under `/dashboard`, sharing one persistent layout (top nav, sidebar, Content Browser, JWT inspector) rather than client-state in a single component.
 
 1. **Add the env var in Vercel** — e.g. `SALES_SIGMA_BASE_URL=https://app.sigmacomputing.com/your-org/workbook/...`
 
-2. **Add a nav item in `components/DashboardShell.js`:**
+2. **Add a route** — `app/dashboard/<slug>/page.js`, fetching the Clerk user and calling `generateSigmaEmbedUrl({ mode: 'sales', ... })` server-side (see `app/dashboard/legacy/[slug]/page.js` for the pattern), then rendering a client view through `components/ConceptDemoPage.js` (see `components/LegacyExampleView.js`). Call `useDashboardChrome().setJwt(...)` / `setPageTitle(...)` so the JWT inspector and breadcrumb pick it up.
 
-```js
-const NAV_ITEMS = [
-  { label: 'Overview', embeds: [{ mode: '', label: 'Overview', span: 12 }], icon: (...) },
-  { label: 'Sales',     embeds: [{ mode: 'sales', label: 'Sales', span: 12 }], icon: (...) },  // ← add this
-];
-```
+3. **Add a link** in `NAV_LINKS` in `components/DashboardChrome.js`.
 
-3. **Push to deploy** — Vercel picks up the new env var and nav item automatically.
+4. **Push to deploy** — Vercel picks up the new env var and route automatically.
 
-The `mode` string maps to `{MODE}_SIGMA_BASE_URL` — so `mode: 'sales'` reads `SALES_SIGMA_BASE_URL`. No other code changes needed.
+The `mode` string maps to `{MODE}_SIGMA_BASE_URL` — so `mode: 'sales'` reads `SALES_SIGMA_BASE_URL`.
 
 ---
 
@@ -342,7 +344,11 @@ embed_examplesite/
 │   │   └── sigma/
 │   │       ├── jwt/route.js        # Verifies Clerk session, returns signed Sigma embed URL
 │   │       └── tree/route.js       # Content Browser tree via the Sigma REST API
-│   ├── dashboard/page.js           # Protected dashboard page (server component)
+│   ├── dashboard/
+│   │   ├── layout.js               # Auth check + DashboardProvider + DashboardChrome
+│   │   ├── page.js                 # Redirects to the default use case (placeholder until the gallery lands)
+│   │   ├── legacy/[slug]/page.js   # The two pre-existing demo pages, bundled as "Legacy Examples"
+│   │   └── browse/[urlId]/page.js  # A workbook opened from the Content Browser tree
 │   ├── interested/page.js          # Public anonymous embed page (no sign-on)
 │   ├── login/page.js               # Redirects to /sign-in
 │   ├── sign-in/[[...sign-in]]/page.js
@@ -351,13 +357,17 @@ embed_examplesite/
 │   ├── layout.js                   # Root layout + Inter font
 │   └── globals.css                 # Tailwind base + custom utilities
 ├── components/
-│   ├── DashboardShell.js           # Nav, sidebar (incl. Content Browser), embed container
+│   ├── DashboardChrome.js          # Persistent top nav, sidebar (incl. Content Browser), JWT inspector mount
+│   ├── ConceptDemoPage.js          # Shared template — badge, title, description, docs links, content slot
+│   ├── LegacyExampleView.js        # Renders one lib/legacy-examples.js entry through ConceptDemoPage
 │   ├── SigmaEmbed.js               # Fetches JWT, renders iframe, bookmark Save/Update/Delete UI
 │   ├── ContentTree.js              # Sidebar tree — folders, workbooks, bookmark rows
 │   ├── AnonymousEmbed.js           # Embed component for /interested
 │   ├── JwtInspector.js             # Dev panel — decoded JWT claims per embed
 │   └── ExpiryBadge.js              # Live JWT expiry countdown
 ├── lib/
+│   ├── dashboard-context.js        # Cross-route shared state for the dashboard chrome (JWTs, page title, tree refresh)
+│   ├── legacy-examples.js          # Config for the two pre-existing demo pages
 │   ├── sigma-embed.js              # JWT generation and embed URL construction (incl. :bookmark)
 │   ├── sigma-api.js                # Sigma REST API client — org tree, member file grants
 │   ├── bookmarks.js                # Bookmark CRUD against Clerk privateMetadata

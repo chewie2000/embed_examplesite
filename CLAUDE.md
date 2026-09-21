@@ -64,31 +64,48 @@ No test suite — verify changes manually via the dev server. Always run `npm ru
 
 ## Architecture Overview
 
+Each demo "use case" is a real route under `/dashboard`, not client-state in one component (that was `components/DashboardShell.js`, removed in the 2026-09-21 routing restructure — see `embed_examplesite-0so` epic). A shared layout provides the persistent chrome; pages provide only their content.
+
 ```
 Browser
   │
-  ├── GET /dashboard
-  │     └── middleware.js verifies session cookie → renders DashboardShell
+  ├── /dashboard/layout.js
+  │     └── Clerk auth check → DashboardProvider (lib/dashboard-context.js)
+  │           → DashboardChrome (top nav, sidebar nav links, Content Browser, JWT inspector)
+  │
+  ├── GET /dashboard                     → redirects to the default use case (placeholder until
+  │                                          the use-case gallery, embed_examplesite-0so.6, lands here)
+  ├── GET /dashboard/legacy/[slug]        → LEGACY_EXAMPLES entry (lib/legacy-examples.js) rendered
+  │                                          via components/LegacyExampleView.js
+  ├── GET /dashboard/browse/[urlId]       → workbook opened from the Content Browser sidebar tree;
+  │                                          name/bookmark/auto/parent travel as query params so this
+  │                                          route is itself bookmarkable/shareable
   │
   └── GET /api/sigma/jwt?mode=<mode>
         └── Verifies session → lib/sigma-embed.js signs JWT with SIGMA_SECRET
               └── Returns signed embed URL → SigmaEmbed renders iframe
 ```
 
+Pages register their active embed's JWT and page title with the shared chrome via `useDashboardChrome()` (from `lib/dashboard-context.js`) — the JWT inspector and top-nav breadcrumb live in the layout, not the page, so this is how a page's content reaches them.
+
 **Key files:**
 
 | File | Role |
 |---|---|
-| `middleware.js` | Protects `/dashboard` — redirects unauthenticated users to `/login` |
-| `app/api/auth/login/route.js` | Validates credentials, writes encrypted session cookie |
+| `middleware.js` | Protects `/dashboard(.*)` — redirects unauthenticated users to `/sign-in` |
+| `app/dashboard/layout.js` | Clerk auth check, wraps every `/dashboard/*` route in `DashboardProvider` + `DashboardChrome` |
+| `lib/dashboard-context.js` | Cross-route shared state: JWTs (for the inspector), page title, session-length override, Content Browser refresh signal |
+| `components/DashboardChrome.js` | Persistent top nav + sidebar (use-case links + Content Browser) + JWT inspector mount |
+| `lib/legacy-examples.js` | Config for the two pre-existing demo pages bundled as "Legacy Examples" |
+| `components/LegacyExampleView.js` | Renders one `LEGACY_EXAMPLES` entry via `ConceptDemoPage` + `SigmaEmbed` |
+| `app/dashboard/browse/[urlId]/page.js` | Renders a workbook opened from the Content Browser tree |
 | `app/api/sigma/jwt/route.js` | Verifies session, calls `sigma-embed.js`, returns signed URL |
 | `lib/sigma-embed.js` | Builds JWT payload and signs embed URL (HMAC-SHA256 via `jose`) |
 | `lib/sigma-api.js` | Sigma **REST API** helper — OAuth token exchange + builds the embed user's EMBED-workspace tree (distinct from embed JWT signing) |
 | `app/api/sigma/tree/route.js` | Clerk-authed — returns the logged-in embed user's accessible EMBED tree as JSON |
 | `components/ContentTree.js` | Renders the read-only folder/workbook tree from `/api/sigma/tree` |
-| `lib/session.js` | Session creation and verification (encrypted cookie, 8hr expiry) |
-| `components/DashboardShell.js` | Nav + sidebar + embed container — **NAV_ITEMS is the multi-embed config** |
 | `components/SigmaEmbed.js` | Fetches JWT and renders `<iframe>` |
+| `components/ConceptDemoPage.js` | Shared template (badge, title, description, docs links, content slot) every use-case page renders through |
 
 **Deploy:** Vercel auto-deploys on every push to `master`. Every push is production.
 
@@ -96,18 +113,14 @@ Browser
 
 ## Conventions & Patterns
 
-### Adding a new embedded workbook
-
-This is the most common task. Three steps only:
+### Adding a new use-case page
 
 1. Add env var in Vercel: `SALES_SIGMA_BASE_URL=https://app.sigmacomputing.com/...`
-2. Add a nav item in `components/DashboardShell.js`:
-   ```js
-   { label: 'Sales', mode: 'sales', icon: (...) }
-   ```
-3. Push — Vercel picks it up automatically.
+2. Create `app/dashboard/<slug>/page.js` — fetch the Clerk user + `generateSigmaEmbedUrl({ mode: 'sales', ... })` server-side, then render a client view through `components/ConceptDemoPage.js` (see `components/LegacyExampleView.js` for the pattern), calling `useDashboardChrome().setJwt(...)`/`setPageTitle(...)` so the JWT inspector and breadcrumb pick it up.
+3. Add a link to it in `NAV_LINKS` in `components/DashboardChrome.js`.
+4. Push — Vercel picks it up automatically.
 
-The `mode` string (lowercase) maps to `{MODE_UPPERCASE}_SIGMA_BASE_URL`. No other code changes needed.
+Note: `embed_examplesite-ibp.2` (central registry of demo-page config) will likely replace steps 2–3 with a single declarative entry once it lands — this manual version is today's pattern, not the intended end state.
 
 ### Content Browser (REST API) section
 
