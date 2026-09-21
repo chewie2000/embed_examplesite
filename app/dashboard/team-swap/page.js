@@ -1,6 +1,7 @@
 import { currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { generateSigmaEmbedUrl } from '@/lib/sigma-embed';
+import { MENU_BAR_TOP } from '@/lib/embed-url-params';
 import { findWorkbookInWorkspace, resolveMemberByEmail } from '@/lib/sigma-api';
 import { getSwapTeam } from '@/lib/teams';
 import TeamSwapView from '@/components/TeamSwapView';
@@ -55,6 +56,9 @@ export default async function TeamSwapPage({ searchParams }) {
         // isn't doing any work — easy to mistake for the thing granting access.
         userAttributes: {},
         urlId: workbook.urlId,
+        // Show the workbook menu bar at the top, matching the internal-user
+        // legacy example.
+        urlParams: MENU_BAR_TOP,
       });
     } catch (err) {
       error = err.message;

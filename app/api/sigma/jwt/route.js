@@ -1,7 +1,7 @@
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { generateSigmaEmbedUrl } from '@/lib/sigma-embed';
-import { resolveUrlParams } from '@/lib/embed-url-params';
+import { resolveUrlParams, MENU_BAR_TOP } from '@/lib/embed-url-params';
 import { getBookmarkEntry } from '@/lib/bookmarks';
 import { getSwapTeam } from '@/lib/teams';
 
@@ -57,7 +57,12 @@ export async function GET(request) {
   try {
     // Content-browser (urlId) embeds are ad hoc — they don't carry any
     // mode-specific URL params (those are keyed to the pre-configured examples).
-    const urlParams = urlId ? {} : resolveUrlParams(meta, mode);
+    // Team-swap embeds are urlId-based too, but do want the menu bar, and must
+    // match what app/dashboard/team-swap/page.js signed so a client refetch
+    // doesn't drop the menu mid-demo.
+    const urlParams = swapTeam
+      ? { ...MENU_BAR_TOP }
+      : (urlId ? {} : resolveUrlParams(meta, mode));
 
     // Look up the bookmark server-side (never trust a client-supplied id) —
     // only when the client explicitly asked for the bookmarked version
