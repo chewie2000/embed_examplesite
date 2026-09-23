@@ -343,9 +343,6 @@ See [Sigma JWT Claims Reference](https://help.sigmacomputing.com/docs/json-web-t
 embed_examplesite/
 ├── app/
 │   ├── api/
-│   │   ├── auth/
-│   │   │   ├── login/route.js      # Legacy demo credential auth — unused; Clerk handles /sign-in
-│   │   │   └── logout/route.js
 │   │   ├── bookmarks/route.js      # GET/POST — per-user bookmark mapping in Clerk privateMetadata
 │   │   └── sigma/
 │   │       ├── jwt/route.js        # Verifies Clerk session, returns signed Sigma embed URL
@@ -383,8 +380,7 @@ embed_examplesite/
 │   ├── sigma-embed.js              # JWT generation and embed URL construction (incl. :bookmark)
 │   ├── sigma-api.js                # Sigma REST API client — org tree, member file grants
 │   ├── bookmarks.js                # Bookmark CRUD against Clerk privateMetadata
-│   ├── embed-url-params.js         # Per-mode URL filter params (from Clerk publicMetadata)
-│   └── session.js                  # Legacy demo session signing — unused; Clerk handles sessions
+│   └── embed-url-params.js         # Per-mode URL filter params (from Clerk publicMetadata)
 ├── middleware.js                   # Clerk middleware — protects /dashboard
 └── .env.example                    # Environment variable reference
 ```

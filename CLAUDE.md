@@ -144,17 +144,13 @@ A third kind of nav item (`kind: 'tree'`) renders `ContentTree` instead of an em
 
 - `SIGMA_CLIENT_ID` / `SIGMA_SECRET` — from Sigma Admin → Developer Access → Embedding
 - `SIGMA_BASE_URL` — default workbook (no mode prefix)
-- `SESSION_SECRET` — 32-byte random base64 string
-- `DEMO_USER_EMAIL` / `DEMO_USER_PASSWORD` — demo login credentials
 - Per-workbook: `{MODE}_SIGMA_BASE_URL` (e.g. `SALES_SIGMA_BASE_URL`)
 
 In `.env.local` for local dev; in Vercel dashboard for production.
 
 ### Auth
 
-Current demo auth is credential-based via env vars. To upgrade:
-- **Clerk** (recommended): swap `lib/session.js` usage in the JWT route with `auth()` from `@clerk/nextjs/server` — `lib/sigma-embed.js` is unchanged
-- **NextAuth + Okta/Entra**: same principle — only the session-reading code in the JWT route changes
+Auth is handled by Clerk (`clerkMiddleware` in `middleware.js` protects `/dashboard`). The JWT route reads the authenticated Clerk user's email (and optional `sigmaEmail`/`accountType`/`teams`/`userAttributes` from `publicMetadata`) to build the embed JWT's claims. To swap in NextAuth + Okta/Entra instead, only the session-reading code in the JWT route changes — `lib/sigma-embed.js` is unaffected.
 
 ### Session Security
 
