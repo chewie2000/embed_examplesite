@@ -32,6 +32,7 @@ export default function LegacyExampleView({ example, initialEmbedData }) {
       <div className="rounded-xl border border-black/[0.06] shadow-card overflow-hidden bg-white h-full min-h-[420px] flex flex-col">
         <SigmaEmbed
           mode={example.mode}
+          org={example.org}
           label={example.title}
           onJwt={(mode, jwt, embedUrl) => setJwt(mode, jwt, embedUrl, example.title)}
           initialEmbedUrl={initialEmbedData?.embedUrl}

@@ -37,6 +37,13 @@ export async function GET(request) {
 
   const { searchParams } = new URL(request.url);
   const mode = searchParams.get('mode') || '';
+  // Selects which Sigma ORG this embed points at (currently only 'legacy' is
+  // recognized — see the `org` param on generateSigmaEmbedUrl). Distinct from
+  // `mode`, which only selects among pre-configured workbooks WITHIN the
+  // default org. Trusted the same way `mode` already is: the value space is
+  // fixed by this app's own env vars, so a client can only pick among
+  // pre-configured targets, never assert a new one.
+  const org = searchParams.get('org') || '';
 
   // Team Swapping use case: the client asks for one of the four known teams by
   // SLUG, and the team name is resolved here rather than accepted from the
@@ -71,7 +78,7 @@ export async function GET(request) {
     const bookmarkId = urlId && wantBookmark ? getBookmarkEntry(user, urlId)?.id : undefined;
 
     // Debug logging — visible in Vercel function logs
-    console.log('[/api/sigma/jwt] mode:', mode, '| urlId:', urlId || 'none', '| bookmarkId:', bookmarkId || 'none');
+    console.log('[/api/sigma/jwt] mode:', mode, '| org:', org || 'default', '| urlId:', urlId || 'none', '| bookmarkId:', bookmarkId || 'none');
     console.log('[/api/sigma/jwt] publicMetadata:', JSON.stringify(meta));
     console.log('[/api/sigma/jwt] resolved urlParams:', JSON.stringify(urlParams));
 
@@ -85,6 +92,7 @@ export async function GET(request) {
       bookmarkId,
       sessionLength,
       urlParams,
+      org,
     });
 
     return NextResponse.json({ embedUrl, jwt }, {

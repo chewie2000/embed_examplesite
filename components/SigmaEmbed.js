@@ -15,7 +15,7 @@ const BOOKMARK_ACTION_DELAY_MS = 700;
 export default function SigmaEmbed({
   mode = '', urlId, label, onJwt, initialEmbedUrl, initialJwt, sessionLength, refreshKey = 0,
   showModeToggle = false, initialBookmarkId = null, autoExplore = false, onBookmarkChange, onBookmarkDeleted,
-  teamSlug, menuVisible, menuPosition,
+  teamSlug, menuVisible, menuPosition, org,
 }) {
   // Distinct key for ad hoc content-browser embeds (discovered urlId) vs the
   // pre-configured {mode}_SIGMA_BASE_URL examples — used for onJwt/inspector keying.
@@ -332,6 +332,7 @@ export default function SigmaEmbed({
         } else if (mode) {
           params.set('mode', mode);
         }
+        if (org) params.set('org', org);
         if (sessionLength !== undefined) params.set('sessionLength', String(sessionLength));
         // Team Swapping use case — the server resolves this slug to a team name
         // and puts it in the JWT's `teams` claim. Without it, a client-side
@@ -355,7 +356,7 @@ export default function SigmaEmbed({
       }
     }
     fetchEmbedUrl();
-  }, [mode, urlId, autoExplore, teamSlug, menuVisible, menuPosition, sessionLength, refreshKey, localRefreshKey]);
+  }, [mode, urlId, autoExplore, teamSlug, menuVisible, menuPosition, org, sessionLength, refreshKey, localRefreshKey]);
 
   // Progressive loading warning during JWT fetch
   useEffect(() => {
@@ -434,9 +435,19 @@ export default function SigmaEmbed({
         </div>
         <div className="bg-black/[0.03] rounded-xl border border-black/[0.06] p-3 text-left text-[10px] font-mono text-ink-secondary max-w-xs w-full space-y-1">
           <p className="font-sans font-medium text-ink-primary mb-1.5">Required in .env.local</p>
-          <p>SIGMA_CLIENT_ID=your_client_id</p>
-          <p>SIGMA_SECRET=your_secret</p>
-          <p>{mode ? `${mode.toUpperCase()}_SIGMA_BASE_URL=...` : 'SIGMA_BASE_URL=...'}</p>
+          {org === 'legacy' ? (
+            <>
+              <p>LEGACY_SIGMA_CLIENT_ID=your_client_id</p>
+              <p>LEGACY_SIGMA_SECRET=your_secret</p>
+              <p>LEGACY_SIGMA_BASE_URL=...</p>
+            </>
+          ) : (
+            <>
+              <p>SIGMA_CLIENT_ID=your_client_id</p>
+              <p>SIGMA_SECRET=your_secret</p>
+              <p>{mode ? `${mode.toUpperCase()}_SIGMA_BASE_URL=...` : 'SIGMA_BASE_URL=...'}</p>
+            </>
+          )}
         </div>
         <button
           onClick={retry}

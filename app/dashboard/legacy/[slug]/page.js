@@ -26,6 +26,7 @@ export default async function LegacyExamplePage({ params }) {
       userAttributes: meta.userAttributes ?? {},
       mode: example.mode,
       urlParams: resolveUrlParams(meta, example.mode),
+      org: example.org,
     });
   } catch {
     // Falls back to client-side fetch in SigmaEmbed
