@@ -139,12 +139,20 @@ A third kind of nav item (`kind: 'tree'`) renders `ContentTree` instead of an em
 - REST API auth is a **separate** OAuth token exchange (`POST /v2/auth/token`) — see `lib/sigma-api.js`. Needs `SIGMA_API_BASE_URL` (the region-specific API host) and prefers `SIGMA_API_CLIENT_ID/SECRET`, falling back to the embed `SIGMA_CLIENT_ID/SECRET`.
 - The embed user identity is the same `sigmaEmail` used by the JWT route (Clerk `publicMetadata.sigmaEmail`).
 - Embed users are provisioned lazily — the tree shows an empty/"not provisioned" state until the user has embedded once **and** has been granted access to content in the `EMBED` workspace.
+- Always resolves against `org: 'legacy'` (see below) — the Content Browser only ever renders inside Legacy Examples' sidebar, which points at the pre-switch org.
+
+### Org override (`org` param) — Legacy Examples only
+
+Both `generateSigmaEmbedUrl` (`lib/sigma-embed.js`) and the REST helpers (`lib/sigma-api.js`) take an optional `org` param, orthogonal to `mode`: `mode` picks a workbook *within* the org this app's default credentials point at; `org: 'legacy'` points at a **different org entirely** — the one this site ran against before the 2026-09 org switch (`embed_examplesite-0so.11`). Currently used only by Legacy Examples (both example pages, the Content Browser, and anything opened via the Content Browser tree) — nothing else should pass it. A client_id/secret pair, and any token minted from it, is only valid for the org that issued it, so there's deliberately no fallback from `legacy` to the default credentials anywhere in this chain.
 
 ### Environment variables
 
 - `SIGMA_CLIENT_ID` / `SIGMA_SECRET` — from Sigma Admin → Developer Access → Embedding
 - `SIGMA_BASE_URL` — default workbook (no mode prefix)
 - Per-workbook: `{MODE}_SIGMA_BASE_URL` (e.g. `SALES_SIGMA_BASE_URL`)
+- `LEGACY_SIGMA_CLIENT_ID` / `LEGACY_SIGMA_SECRET` / `LEGACY_SIGMA_BASE_URL` — the pre-switch org's embed credentials + Legacy Examples' shared workbook URL
+- `LEGACY_SIGMA_API_BASE_URL` — the pre-switch org's REST API host (verified: AWS-EU, `https://api.eu.aws.sigmacomputing.com` — do not assume it matches the current org's region)
+- `LEGACY_EMBED_WORKSPACE_NAME` — defaults to `"EMBED"`; the pre-switch org's equivalent of `EMBED_WORKSPACE_NAME` (which defaults to `"Embed Success"` for the current org) — these are independent settings for two unrelated orgs, not a fallback pair
 
 In `.env.local` for local dev; in Vercel dashboard for production.
 

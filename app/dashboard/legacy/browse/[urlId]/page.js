@@ -55,6 +55,7 @@ export default function BrowseWorkbookPage() {
       <SigmaEmbed
         key={`${urlId}:${bookmarkId ?? 'plain'}`}
         urlId={urlId}
+        org="legacy"
         label={name}
         onJwt={(mode, jwt, embedUrl) => setJwt(mode, jwt, embedUrl, name)}
         sessionLength={sessionLength}

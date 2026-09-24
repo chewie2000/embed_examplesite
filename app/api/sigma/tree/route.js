@@ -15,6 +15,12 @@ export const revalidate = 0;
  * The user identity mirrors /api/sigma/jwt: publicMetadata.sigmaEmail
  * (falling back to the Clerk login email) is the embed user's JWT `sub`,
  * which is also the Sigma member email we resolve here.
+ *
+ * Always resolves against org: 'legacy' (embed_examplesite-0so.11) — the
+ * Content Browser only ever renders inside Legacy Examples' sidebar
+ * (components/LegacySidebar.js is its sole consumer), which now points at
+ * the org this site ran against before the 2026-09 switch. Not a query
+ * param, because there's no other caller for this to vary by.
  */
 export async function GET() {
   const { userId } = await auth();
@@ -28,7 +34,7 @@ export async function GET() {
   const sigmaEmail = meta.sigmaEmail || loginEmail;
 
   try {
-    const result = await buildEmbedUserTree(sigmaEmail);
+    const result = await buildEmbedUserTree(sigmaEmail, 'legacy');
     attachBookmarks(result.tree, getBookmarksMap(user));
 
     console.log('[/api/sigma/tree] sigmaEmail:', sigmaEmail);
