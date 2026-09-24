@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import ContentTree from './ContentTree';
+import InfoButton from './InfoButton';
 import { useDashboardChrome } from '@/lib/dashboard-context';
 import { LEGACY_EXAMPLES } from '@/lib/legacy-examples';
 
@@ -73,9 +74,27 @@ export default function LegacySidebar() {
 
       {/* Content Browser — tree of what this embed user can reach, via the Sigma REST API */}
       <div className="flex-1 min-h-0 flex flex-col border-t border-black/[0.06] pt-2">
-        <p className="text-[10px] font-semibold text-ink-secondary uppercase tracking-widest mb-1 px-3">
-          Content Browser
-        </p>
+        <div className="flex items-center gap-1.5 mb-1 px-3">
+          <p className="text-[10px] font-semibold text-ink-secondary uppercase tracking-widest">
+            Content Browser
+          </p>
+          <InfoButton title="Live content discovery via the Sigma REST API">
+            This tree isn&apos;t hardcoded — it&apos;s fetched live from Sigma&apos;s REST API
+            (<code className="text-brand-600">GET /v2/members/&#123;memberId&#125;/files</code>),
+            scoped to exactly what this logged-in embed user can access. It&apos;s the same
+            REST-API-driven discovery pattern as Team Swapping&apos;s file list, applied here to a
+            whole folder tree rather than one workspace — letting a host application surface a
+            user&apos;s real content without wiring a fixed embed URL per page.
+            <a
+              href="https://help.sigmacomputing.com/reference/list-accessible-inodes"
+              target="_blank"
+              rel="noreferrer"
+              className="mt-2 flex items-center gap-1 text-brand-600 hover:text-brand-700 font-medium"
+            >
+              Sigma docs: List member files (API reference) ↗
+            </a>
+          </InfoButton>
+        </div>
         <div className="flex-1 min-h-0 overflow-y-auto px-1 pb-2">
           <ContentTree
             compact
