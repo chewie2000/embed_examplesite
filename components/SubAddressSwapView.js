@@ -65,10 +65,7 @@ export default function SubAddressSwapView({ identity, workbook, embedData, memb
         {identity && (
           <div className="shrink-0 flex flex-wrap items-center gap-x-5 gap-y-1 text-[11px] text-ink-secondary">
             <span className="flex items-center gap-1.5">
-              Claim sent: <code className="text-brand-600">sub: &quot;{identity.email}&quot;</code>{' '}
-              <span className="text-ink-secondary">
-                (no <code className="text-brand-600">teams</code> claim)
-              </span>
+              Claim sent: <code className="text-brand-600">sub: &quot;{identity.email}&quot;</code>
               <InfoButton title="No team claim at all — Sigma applies it on its own">
                 Team Swapping picks a team directly: the signed-in user stays the same, and a menu
                 sets the <code className="text-brand-600">teams</code> claim. Here there&apos;s no
