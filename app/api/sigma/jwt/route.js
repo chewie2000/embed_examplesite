@@ -5,7 +5,6 @@ import { resolveUrlParams, resolveMenuState, menuStateUrlParams } from '@/lib/em
 import { getBookmarkEntry } from '@/lib/bookmarks';
 import { getSwapTeam } from '@/lib/teams';
 import { getSubAddressIdentity } from '@/lib/subaddress-identities';
-import { resolveMemberTeamName } from '@/lib/sigma-api';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -60,15 +59,14 @@ export async function GET(request) {
   const subAddress = getSubAddressIdentity(searchParams.get('subAddressSlug'), baseEmail);
 
   const sigmaEmail = subAddress ? subAddress.email : baseEmail;
-  // The team claim is NOT an independent override here, and it isn't parsed
-  // or guessed from the address either — it's looked up LIVE from Sigma's
-  // own data (resolveMemberTeamName queries GET /v2/members/{id}/teams).
-  // That's the actual mechanism this use case demonstrates: the team
-  // genuinely comes from Sigma, because this identity is a real member
-  // that's already, persistently assigned to it there.
-  const subAddressTeam = subAddress ? await resolveMemberTeamName(subAddress.email) : null;
+  // Sub-Address Swapping deliberately sends NO teams claim at all — the JWT
+  // asserts identity only (sub), and Sigma applies that member's real,
+  // persistent team membership entirely on its own. That's the actual
+  // mechanism this use case demonstrates: the team isn't asserted by this
+  // app in any form, sourced-from-Sigma or otherwise — it comes from Sigma
+  // at embed-load time, the same as it would for an internal user.
   const teams = subAddress
-    ? (subAddressTeam ? [subAddressTeam] : [])
+    ? []
     : (swapTeam ? [swapTeam.name] : (meta.teams ?? []));
   // Those workbooks don't use attribute-driven RLS. Kept in step with the
   // server-rendered JWT in app/dashboard/team-swap/page.js (and the

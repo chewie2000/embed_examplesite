@@ -12,12 +12,12 @@ export const revalidate = 0;
 
 /**
  * Sibling to app/dashboard/team-swap/page.js — same shape, but there's no
- * independent team decision here. The picked IDENTITY sets the JWT's `sub`;
- * `teams` is looked up LIVE from Sigma's own data (resolveMemberTeamName) —
- * each of the four sub-addressed identities is a real Sigma member already,
- * persistently assigned to its matching compass team. Team Swapping, by
- * contrast, only ever overrides `teams` directly via the JWT, keeping `sub`
- * fixed as the real signed-in user's own email.
+ * teams claim sent at all. The picked IDENTITY sets the JWT's `sub`; Sigma's
+ * real, persistent team membership for that member (looked up here only to
+ * know which workspace to list/embed from, via resolveMemberTeamName) is
+ * what Sigma itself applies at embed-load time — never asserted in the JWT.
+ * Team Swapping, by contrast, only ever overrides `teams` directly via the
+ * JWT, keeping `sub` fixed as the real signed-in user's own email.
  */
 export default async function SubAddressSwapPage({ searchParams }) {
   const { identity: slug, urlId, menu, pos } = await searchParams;
@@ -92,10 +92,12 @@ export default async function SubAddressSwapPage({ searchParams }) {
     try {
       embedData = await generateSigmaEmbedUrl({
         // The identity's email IS the sub claim here — the whole point of
-        // this use case vs. Team Swapping, which keeps sub fixed. teams
-        // reuses the SAME live-resolved value above, not a separate lookup.
+        // this use case vs. Team Swapping, which keeps sub fixed.
+        // Deliberately NO teams claim: `team` above is only used to find
+        // the right workspace to list/embed from, never sent to Sigma —
+        // Sigma applies this member's real, persistent team membership on
+        // its own, from sub alone.
         email: identity.email,
-        teams: [team],
         // No user attributes: same reasoning as Team Swapping — these
         // workbooks don't do attribute-driven RLS.
         userAttributes: {},

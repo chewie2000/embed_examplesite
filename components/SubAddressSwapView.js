@@ -13,7 +13,7 @@ const DOCS = [
 ];
 
 const DESCRIPTION =
-  "A sibling to Team Swapping via JWT — same four teams and workspaces, different mechanism. There, you stay signed in as one user and pick a team from a menu. Here, there's no team picker at all: picking one of these four sub-addressed logins sets the JWT's sub claim, and the teams claim is looked up live from Sigma itself — each identity is a real Sigma member already, persistently assigned to its matching team — the same way a customer's SSO might issue one address per business unit, with team resolution following the login rather than a selector inside it.";
+  "A sibling to Team Swapping via JWT — same four teams and workspaces, different mechanism. There, you stay signed in as one user and a menu sets the teams claim directly. Here, there's no teams claim at all: picking one of these four sub-addressed logins only sets the JWT's sub claim, and Sigma applies that member's own real, persistent team membership entirely on its own — the same way a customer's SSO might issue one address per business unit, with team resolution following the login rather than anything asserted in the token.";
 
 export default function SubAddressSwapView({ identity, workbook, embedData, memberType, error, menuState }) {
   const { setJwt, clearJwts, setPageTitle, sessionLength, refreshKey } = useDashboardChrome();
@@ -65,23 +65,22 @@ export default function SubAddressSwapView({ identity, workbook, embedData, memb
         {identity && (
           <div className="shrink-0 flex flex-wrap items-center gap-x-5 gap-y-1 text-[11px] text-ink-secondary">
             <span className="flex items-center gap-1.5">
-              Claim sent:{' '}
-              <code className="text-brand-600">
-                sub: &quot;{identity.email}&quot;, teams: [&quot;{identity.team}&quot;]
-              </code>
-              <InfoButton title="The team isn't chosen — it comes from Sigma">
+              Claim sent: <code className="text-brand-600">sub: &quot;{identity.email}&quot;</code>{' '}
+              <span className="text-ink-secondary">
+                (no <code className="text-brand-600">teams</code> claim)
+              </span>
+              <InfoButton title="No team claim at all — Sigma applies it on its own">
                 Team Swapping picks a team directly: the signed-in user stays the same, and a menu
                 sets the <code className="text-brand-600">teams</code> claim. Here there&apos;s no
-                separate team decision at all — picking a login only resolves which sub-addressed
-                email becomes <code className="text-brand-600">sub</code>. The{' '}
-                <code className="text-brand-600">teams</code> claim is then looked up LIVE from
-                Sigma&apos;s own data (<code className="text-brand-600">GET /v2/members/&#123;id&#125;/teams</code>
-                ), not parsed from the address or guessed by this app — each of these four is a
-                real Sigma member that&apos;s already, persistently assigned to its matching
-                compass team. Sigma resolves this as a genuinely different identity, not the same
-                user claiming a different team; if a sub-addressed email were ever removed from its
-                team (or not provisioned at all — Sigma provisions members lazily, on first real
-                embed load), that shows up here as-is rather than falling back to a guess.
+                team claim in the JWT at all — only <code className="text-brand-600">sub</code>{' '}
+                is asserted. Sigma resolves this member&apos;s access from its own real, persistent
+                team membership (<code className="text-brand-600">GET /v2/members/&#123;id&#125;/teams</code>
+                {' '}shows the same team below, purely for this page&apos;s own transparency — it
+                is NOT sent to Sigma), the same way it would for an internal user who signed in
+                directly. Sigma resolves this as a genuinely different identity, not the same user
+                claiming a different team; if a sub-addressed email were ever removed from its team
+                (or not provisioned at all — Sigma provisions members lazily, on first real embed
+                load), Sigma itself would apply that, not this app.
                 <a
                   href="https://help.sigmacomputing.com/reference/list-member-teams"
                   target="_blank"
@@ -99,6 +98,10 @@ export default function SubAddressSwapView({ identity, workbook, embedData, memb
                   Sigma docs: JWT claims reference ↗
                 </a>
               </InfoButton>
+            </span>
+            <span>
+              Sigma&apos;s real team for this member:{' '}
+              <span className="text-ink-primary">{identity.team ?? '—'}</span>
             </span>
             {workbook && (
               <span>

@@ -107,7 +107,7 @@ export default function SubAddressSwapSidebar({ identities }) {
       <div className="p-3 gap-0.5 flex flex-col shrink-0">
         <div className="flex items-center gap-1.5 mb-2 px-2 pt-1">
           <p className="text-[10px] font-semibold text-ink-secondary uppercase tracking-widest">
-            Teams
+            Workspaces
           </p>
           <InfoButton title="Sub-Address Swapping via JWT">
             Each of these is the SAME underlying signed-in embed account, using email
@@ -116,13 +116,12 @@ export default function SubAddressSwapSidebar({ identities }) {
             test account, so whichever account is signed in determines whether these four are
             actually usable (see below if any show as not set up). Picking one re-signs this
             embed&apos;s JWT with that exact email as <code className="text-brand-600">sub</code>{' '}
-            — there&apos;s no separate
-            team decision anywhere in this flow. Each of these four is a real Sigma member
-            that&apos;s already, persistently assigned to its matching team, so the{' '}
-            <code className="text-brand-600">teams</code> claim is looked up LIVE from Sigma
-            itself, not parsed or guessed by this app. Sigma resolves everything the embed user can
-            reach from those claims, the same as if a customer&apos;s SSO issued one address per
-            business unit and team resolution just followed the login.
+            — and sends NO <code className="text-brand-600">teams</code> claim at all. Each of
+            these four is a real Sigma member that&apos;s already, persistently assigned to its
+            matching team, so Sigma applies that access entirely on its own, the same as it would
+            for an internal user signing in directly. Nothing about team membership is asserted by
+            this app, the same as if a customer&apos;s SSO issued one address per business unit and
+            team resolution just followed the login.
             <a
               href="https://help.sigmacomputing.com/reference/list-member-teams"
               target="_blank"
