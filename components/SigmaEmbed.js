@@ -15,7 +15,7 @@ const BOOKMARK_ACTION_DELAY_MS = 700;
 export default function SigmaEmbed({
   mode = '', urlId, label, onJwt, initialEmbedUrl, initialJwt, sessionLength, refreshKey = 0,
   showModeToggle = false, initialBookmarkId = null, autoExplore = false, onBookmarkChange, onBookmarkDeleted,
-  teamSlug, menuVisible, menuPosition, org,
+  teamSlug, subAddressSlug, menuVisible, menuPosition, org,
 }) {
   // Distinct key for ad hoc content-browser embeds (discovered urlId) vs the
   // pre-configured {mode}_SIGMA_BASE_URL examples — used for onJwt/inspector keying.
@@ -339,6 +339,9 @@ export default function SigmaEmbed({
         // refetch (retry, or a session-length regenerate) would rebuild the JWT
         // from Clerk metadata and silently drop the selected team.
         if (teamSlug) params.set('teamSlug', teamSlug);
+        // Sub-Address Swapping use case — same reasoning as teamSlug above,
+        // but resolves to BOTH sub and teams server-side (see /api/sigma/jwt).
+        if (subAddressSlug) params.set('subAddressSlug', subAddressSlug);
         // Team Swapping's interactive menu switches — only meaningful together
         // with teamSlug, since that's what tells the server to honor them at all.
         if (menuVisible !== undefined) params.set('menu', menuVisible ? '1' : '0');
@@ -356,7 +359,7 @@ export default function SigmaEmbed({
       }
     }
     fetchEmbedUrl();
-  }, [mode, urlId, autoExplore, teamSlug, menuVisible, menuPosition, org, sessionLength, refreshKey, localRefreshKey]);
+  }, [mode, urlId, autoExplore, teamSlug, subAddressSlug, menuVisible, menuPosition, org, sessionLength, refreshKey, localRefreshKey]);
 
   // Progressive loading warning during JWT fetch
   useEffect(() => {

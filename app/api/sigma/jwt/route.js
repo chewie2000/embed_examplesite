@@ -4,6 +4,8 @@ import { generateSigmaEmbedUrl } from '@/lib/sigma-embed';
 import { resolveUrlParams, resolveMenuState, menuStateUrlParams } from '@/lib/embed-url-params';
 import { getBookmarkEntry } from '@/lib/bookmarks';
 import { getSwapTeam } from '@/lib/teams';
+import { getSubAddressIdentity } from '@/lib/subaddress-identities';
+import { resolveMemberTeamName } from '@/lib/sigma-api';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -32,7 +34,6 @@ export async function GET(request) {
   const loginEmail = user.emailAddresses[0]?.emailAddress;
   const meta = user.publicMetadata ?? {};
 
-  const sigmaEmail = meta.sigmaEmail || loginEmail;
   const accountType = meta.accountType;
 
   const { searchParams } = new URL(request.url);
@@ -50,12 +51,31 @@ export async function GET(request) {
   // request — a client that could name its own team could assert membership in
   // any team in the org. An unrecognized slug falls through to the Clerk value.
   const swapTeam = getSwapTeam(searchParams.get('teamSlug'));
-  const teams = swapTeam ? [swapTeam.name] : (meta.teams ?? []);
+  // Sub-Address Swapping use case: same trust model (resolved server-side
+  // from a slug, never accepted raw). swapTeam and subAddress are mutually
+  // exclusive in practice (each page only ever sends its own param). The
+  // four candidates are built from THIS user's own resolved email (no
+  // hardcoded base account) — see lib/subaddress-identities.js.
+  const baseEmail = meta.sigmaEmail || loginEmail;
+  const subAddress = getSubAddressIdentity(searchParams.get('subAddressSlug'), baseEmail);
+
+  const sigmaEmail = subAddress ? subAddress.email : baseEmail;
+  // The team claim is NOT an independent override here, and it isn't parsed
+  // or guessed from the address either — it's looked up LIVE from Sigma's
+  // own data (resolveMemberTeamName queries GET /v2/members/{id}/teams).
+  // That's the actual mechanism this use case demonstrates: the team
+  // genuinely comes from Sigma, because this identity is a real member
+  // that's already, persistently assigned to it there.
+  const subAddressTeam = subAddress ? await resolveMemberTeamName(subAddress.email) : null;
+  const teams = subAddress
+    ? (subAddressTeam ? [subAddressTeam] : [])
+    : (swapTeam ? [swapTeam.name] : (meta.teams ?? []));
   // Those workbooks don't use attribute-driven RLS. Kept in step with the
-  // server-rendered JWT in app/dashboard/team-swap/page.js so a client refetch
-  // (retry, session-length regenerate) doesn't quietly produce different claims
-  // than the page first loaded with.
-  const userAttributes = swapTeam ? {} : (meta.userAttributes ?? {});
+  // server-rendered JWT in app/dashboard/team-swap/page.js (and the
+  // subaddress-swap equivalent) so a client refetch (retry, session-length
+  // regenerate) doesn't quietly produce different claims than the page first
+  // loaded with.
+  const userAttributes = (subAddress || swapTeam) ? {} : (meta.userAttributes ?? {});
   const urlId = searchParams.get('urlId') || undefined;
   const wantBookmark = searchParams.get('wantBookmark') === '1';
   const sessionLengthParam = searchParams.get('sessionLength');
@@ -67,7 +87,7 @@ export async function GET(request) {
     // Team-swap embeds are urlId-based too, but do want the menu bar, and must
     // match what app/dashboard/team-swap/page.js signed so a client refetch
     // doesn't drop the menu mid-demo.
-    const urlParams = swapTeam
+    const urlParams = (subAddress || swapTeam)
       ? menuStateUrlParams(resolveMenuState({ menu: searchParams.get('menu'), pos: searchParams.get('pos') }))
       : (urlId ? {} : resolveUrlParams(meta, mode));
 
@@ -78,7 +98,7 @@ export async function GET(request) {
     const bookmarkId = urlId && wantBookmark ? getBookmarkEntry(user, urlId)?.id : undefined;
 
     // Debug logging — visible in Vercel function logs
-    console.log('[/api/sigma/jwt] mode:', mode, '| org:', org || 'default', '| urlId:', urlId || 'none', '| bookmarkId:', bookmarkId || 'none');
+    console.log('[/api/sigma/jwt] mode:', mode, '| org:', org || 'default', '| subAddress:', subAddress?.slug || 'none', '| urlId:', urlId || 'none', '| bookmarkId:', bookmarkId || 'none');
     console.log('[/api/sigma/jwt] publicMetadata:', JSON.stringify(meta));
     console.log('[/api/sigma/jwt] resolved urlParams:', JSON.stringify(urlParams));
 
