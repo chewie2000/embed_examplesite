@@ -5,9 +5,13 @@ import Link from 'next/link';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import InfoButton from './InfoButton';
 
-const loginIcon = (
+// Same icon as TeamSwapSidebar's teamIcon — this list is meant to look like
+// that one (workspace/team names), even though what's actually selected is
+// a sub-addressed login. The distinction shows up in the main content area,
+// not here — see SubAddressSwapView.js.
+const teamIcon = (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l3 3m0 0l-3 3m3-3H2.25" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
   </svg>
 );
 
@@ -103,7 +107,7 @@ export default function SubAddressSwapSidebar({ identities }) {
       <div className="p-3 gap-0.5 flex flex-col shrink-0">
         <div className="flex items-center gap-1.5 mb-2 px-2 pt-1">
           <p className="text-[10px] font-semibold text-ink-secondary uppercase tracking-widest">
-            Logins
+            Teams
           </p>
           <InfoButton title="Sub-Address Swapping via JWT">
             Each of these is the SAME underlying signed-in embed account, using email
@@ -140,6 +144,9 @@ export default function SubAddressSwapSidebar({ identities }) {
         {identities.map((identity) => {
           const isActive = activeSlug === identity.slug;
           if (!identity.ok) {
+            // No resolved team name to show for a broken one — its email is
+            // the only identifying info available, so it's shown here (and
+            // only here) as a fallback.
             return (
               <div
                 key={identity.slug}
@@ -147,7 +154,7 @@ export default function SubAddressSwapSidebar({ identities }) {
                 className="w-full flex flex-col gap-0.5 px-3 py-2 rounded-lg text-sm border border-transparent cursor-not-allowed"
               >
                 <div className="flex items-center gap-2.5">
-                  <span className="text-zinc-300">{loginIcon}</span>
+                  <span className="text-zinc-300">{teamIcon}</span>
                   <span className="truncate font-mono text-[12px] text-zinc-300 line-through decoration-zinc-300">
                     {identity.email}
                   </span>
@@ -168,8 +175,8 @@ export default function SubAddressSwapSidebar({ identities }) {
                   : 'text-ink-secondary hover:text-ink-primary hover:bg-black/[0.03] border border-transparent'
               }`}
             >
-              <span className={isActive ? 'text-brand-500' : 'text-zinc-400'}>{loginIcon}</span>
-              <span className="truncate font-mono text-[12px]">{identity.email}</span>
+              <span className={isActive ? 'text-brand-500' : 'text-zinc-400'}>{teamIcon}</span>
+              {identity.team}
             </Link>
           );
         })}
