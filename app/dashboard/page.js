@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useDashboardChrome } from '@/lib/dashboard-context';
 import { BADGE_TONE } from '@/components/ConceptDemoPage';
@@ -19,6 +19,22 @@ export default function UseCaseGalleryPage() {
   useEffect(() => {
     setPageTitle('Use Cases');
   }, [setPageTitle]);
+
+  // Sub-Address Swapping's four logins are only usable if the signed-in
+  // account's own sub-addressed variants are real, team-assigned Sigma
+  // members (see lib/subaddress-identities.js) — checked live here, on the
+  // gallery card itself, rather than only after clicking in. No generic
+  // "preflight per use case" mechanism exists (or is needed) beyond this one
+  // card, which is the only use case with this kind of precondition.
+  const [subAddressPreflight, setSubAddressPreflight] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/sigma/subaddress-preflight')
+      .then((res) => res.json())
+      .then((data) => { if (!cancelled) setSubAddressPreflight(data.identities ?? null); })
+      .catch(() => { if (!cancelled) setSubAddressPreflight(null); });
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <UseCaseMain>
@@ -56,6 +72,17 @@ export default function UseCaseGalleryPage() {
               </div>
               <h2 className="text-sm font-semibold text-ink-primary">{useCase.title}</h2>
               <p className="text-xs text-ink-secondary leading-relaxed">{useCase.summary}</p>
+              {useCase.slug === 'subaddress-swap' && subAddressPreflight && (() => {
+                const readyCount = subAddressPreflight.filter((i) => i.ok).length;
+                if (readyCount === subAddressPreflight.length) return null;
+                return (
+                  <p className="text-[10px] text-amber-700 leading-relaxed -mt-1">
+                    {readyCount === 0
+                      ? 'Not set up in Sigma yet for this account'
+                      : `Only ${readyCount} of ${subAddressPreflight.length} logins ready for this account`}
+                  </p>
+                );
+              })()}
             </Link>
           ))}
         </div>
