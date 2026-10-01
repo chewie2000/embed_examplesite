@@ -8,14 +8,9 @@ export const BADGE_TONE = {
 };
 
 /**
- * Shared layout for every "concept demo" page — a realistic-looking page that
- * demonstrates one Sigma embed capability, rather than a bare embed dropped on
- * a blank page. Used both for standalone routes (e.g. /interested) and for
- * every use-case route under /dashboard (e.g. LegacyExampleView).
- *
- * Deliberately does NOT render page chrome (top nav, footer, sidebar) — that
- * varies per call site (a public page vs. the logged-in dashboard). This is
- * just the "what is this, what does it prove, where can I read more" body.
+ * Shared layout for every "concept demo" page — badge, title, description,
+ * docs links, and a content slot. Does not render page chrome (nav, footer,
+ * sidebar), since that varies per call site.
  */
 export default function ConceptDemoPage({ badge, title, description, docs = [], children }) {
   return (

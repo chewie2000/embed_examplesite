@@ -55,11 +55,7 @@ const INFO = {
   },
 };
 
-/**
- * Renders one of the LEGACY_EXAMPLES (lib/legacy-examples.js) at its own
- * route. Content and behavior match the original DashboardShell NAV_ITEMS
- * exactly — this just gives each one a real URL instead of client-state.
- */
+// Renders one of the LEGACY_EXAMPLES (lib/legacy-examples.js) at its own route.
 export default function LegacyExampleView({ example, initialEmbedData }) {
   const { setJwt, clearJwts, setPageTitle, sessionLength, refreshKey } = useDashboardChrome();
 

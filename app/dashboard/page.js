@@ -8,10 +8,9 @@ import UseCaseMain from '@/components/UseCaseMain';
 import { USE_CASES } from '@/lib/use-cases';
 
 /**
- * The /dashboard landing page — a gallery of use cases to pick from and talk
- * a customer through, rather than dropping straight into the first example
- * (embed_examplesite-0so.6). Each card previews the same badge/title/summary
- * metadata its target page shows in full via ConceptDemoPage.
+ * The /dashboard landing page — a gallery of use cases, each card previewing
+ * the same badge/title/summary metadata its target page shows in full via
+ * ConceptDemoPage.
  */
 export default function UseCaseGalleryPage() {
   const { setPageTitle } = useDashboardChrome();
@@ -20,12 +19,9 @@ export default function UseCaseGalleryPage() {
     setPageTitle('Use Cases');
   }, [setPageTitle]);
 
-  // Sub-Address Swapping's four logins are only usable if the signed-in
-  // account's own sub-addressed variants are real, team-assigned Sigma
-  // members (see lib/subaddress-identities.js) — checked live here, on the
-  // gallery card itself, rather than only after clicking in. No generic
-  // "preflight per use case" mechanism exists (or is needed) beyond this one
-  // card, which is the only use case with this kind of precondition.
+  // Only Sub-Address Swapping needs this — its four logins are only usable
+  // if the signed-in account's own sub-addressed variants are real,
+  // team-assigned Sigma members.
   const [subAddressPreflight, setSubAddressPreflight] = useState(null);
   useEffect(() => {
     let cancelled = false;

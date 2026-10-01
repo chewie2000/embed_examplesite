@@ -32,10 +32,9 @@ export default async function LegacyExamplePage({ params }) {
     // Falls back to client-side fetch in SigmaEmbed
   }
 
-  // Keyed per example so switching between them remounts rather than updating
-  // in place. SigmaEmbed seeds its embed URL from initialEmbedUrl on mount only
-  // and skips its client fetch while server-rendered data is present, so an
-  // in-place update would keep showing the previous example's workbook.
+  // Keyed per example to force a remount — SigmaEmbed seeds its URL from
+  // initialEmbedUrl on mount only, so an in-place update would keep showing
+  // the previous example's workbook.
   return (
     <LegacyExampleView
       key={example.slug}

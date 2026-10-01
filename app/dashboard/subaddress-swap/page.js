@@ -11,13 +11,11 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 /**
- * Sibling to app/dashboard/team-swap/page.js — same shape, but there's no
- * teams claim sent at all. The picked IDENTITY sets the JWT's `sub`; Sigma's
- * real, persistent team membership for that member (looked up here only to
- * know which workspace to list/embed from, via resolveMemberTeamName) is
- * what Sigma itself applies at embed-load time — never asserted in the JWT.
- * Team Swapping, by contrast, only ever overrides `teams` directly via the
- * JWT, keeping `sub` fixed as the real signed-in user's own email.
+ * Sibling to app/dashboard/team-swap/page.js, but no teams claim is sent.
+ * The picked identity sets the JWT's `sub`; its real Sigma team (resolved
+ * here only to know which workspace to list/embed from) is what Sigma
+ * applies on its own at embed-load time. Team Swapping, by contrast,
+ * overrides `teams` directly while keeping `sub` fixed.
  */
 export default async function SubAddressSwapPage({ searchParams }) {
   const { identity: slug, urlId, menu, pos } = await searchParams;
@@ -26,9 +24,8 @@ export default async function SubAddressSwapPage({ searchParams }) {
   const user = await currentUser();
   if (!user) redirect('/sign-in');
 
-  // Same base-email resolution as the layout's preflight (and everywhere
-  // else in this app) — recomputed here rather than shared, since a layout
-  // and its page render independently and don't share server-side state.
+  // Recomputed rather than shared with the layout's preflight — a layout
+  // and its page render independently.
   const meta = user.publicMetadata ?? {};
   const baseEmail = meta.sigmaEmail || user.emailAddresses[0]?.emailAddress;
   const identity = getSubAddressIdentity(slug, baseEmail);
@@ -43,13 +40,8 @@ export default async function SubAddressSwapPage({ searchParams }) {
   let error = null;
 
   try {
-    // team is resolved from Sigma's real, persistent team membership for
-    // this identity's email, not configured here — see
-    // resolveMemberTeamName's own comment. member is resolved separately
-    // (redundant one extra lookup, kept for clarity) purely to show its
-    // memberType; before this identity's first real embed load, Sigma
-    // hasn't provisioned a member for it yet, and that's shown as-is, not
-    // an error.
+    // member is a redundant second lookup (resolveMemberTeamName does its
+    // own), kept to show memberType — null before first embed, shown as-is.
     [team, member] = await Promise.all([
       resolveMemberTeamName(identity.email),
       resolveMemberByEmail(identity.email),
@@ -91,15 +83,10 @@ export default async function SubAddressSwapPage({ searchParams }) {
   if (workbook && !error) {
     try {
       embedData = await generateSigmaEmbedUrl({
-        // The identity's email IS the sub claim here — the whole point of
-        // this use case vs. Team Swapping, which keeps sub fixed.
-        // Deliberately NO teams claim: `team` above is only used to find
-        // the right workspace to list/embed from, never sent to Sigma —
-        // Sigma applies this member's real, persistent team membership on
-        // its own, from sub alone.
+        // No teams claim: `team` above only finds the right workspace,
+        // never sent to Sigma. No user attributes: this workbook doesn't
+        // do attribute-driven RLS.
         email: identity.email,
-        // No user attributes: same reasoning as Team Swapping — these
-        // workbooks don't do attribute-driven RLS.
         userAttributes: {},
         urlId: workbook.urlId,
         urlParams: menuStateUrlParams(menuState),

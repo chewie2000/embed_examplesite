@@ -16,11 +16,9 @@ export const revalidate = 0;
  * (falling back to the Clerk login email) is the embed user's JWT `sub`,
  * which is also the Sigma member email we resolve here.
  *
- * Always resolves against org: 'legacy' (embed_examplesite-0so.11) — the
- * Content Browser only ever renders inside Legacy Examples' sidebar
- * (components/LegacySidebar.js is its sole consumer), which now points at
- * the org this site ran against before the 2026-09 switch. Not a query
- * param, because there's no other caller for this to vary by.
+ * Always resolves against org: 'legacy' — the Content Browser only ever
+ * renders inside Legacy Examples' sidebar, which points at a different org
+ * than the rest of the app. Not a query param since there's no other caller.
  */
 export async function GET() {
   const { userId } = await auth();

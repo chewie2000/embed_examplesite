@@ -30,11 +30,8 @@ export default async function TeamSwapPage({ searchParams }) {
   let error = null;
 
   try {
-    // Resolved live rather than configured, so re-copying/adding workbooks
-    // doesn't strand this page on stale ids. Same list the sidebar fetches
-    // independently (it can't see this page's props — see the note in
-    // app/api/sigma/team-files/route.js) — doubles as validating that urlId
-    // actually belongs to this team's workspace, not just an arbitrary id.
+    // Resolved live so this doubles as validating that urlId actually
+    // belongs to this team's workspace.
     [files, member] = await Promise.all([
       listWorkbooksInWorkspace(team.name),
       resolveMemberByEmail(sigmaEmail),

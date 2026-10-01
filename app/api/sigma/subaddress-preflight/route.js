@@ -9,11 +9,8 @@ export const revalidate = 0;
 /**
  * GET /api/sigma/subaddress-preflight
  *
- * Same preflight app/dashboard/subaddress-swap/layout.js already runs
- * (checkSubAddressSetup), exposed as its own endpoint so the use-case
- * GALLERY (app/dashboard/page.js) can show whether Sub-Address Swapping is
- * actually usable for the signed-in account BEFORE clicking into it —
- * rather than only surfacing that once inside the use case's own sidebar.
+ * Same preflight the use case's own layout.js runs, exposed separately so
+ * the gallery card can show whether it's usable before clicking in.
  */
 export async function GET() {
   const { userId } = await auth();

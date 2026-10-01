@@ -5,11 +5,9 @@ import { useState, useEffect, useRef } from 'react';
 // Triggers our retry overlay before Chrome's ~30s ERR_TIMED_OUT page would render.
 const IFRAME_LOAD_TIMEOUT_MS = 25_000;
 const FETCH_SLOW_WARNING_MS = 8_000;
-// There's no confirmation event for workbook:mode:update itself, so bookmark
-// actions that depend on Explore mode already being active (select, and the
-// select-then-update pairing) wait this long after sending mode:update /
-// select before firing the next message — otherwise Sigma can silently drop
-// or reject them if they arrive before the mode switch has finished.
+// workbook:mode:update has no confirmation event, so actions depending on
+// Explore already being active wait this long after sending mode:update/
+// select — Sigma can silently drop them if they arrive mid-switch.
 const BOOKMARK_ACTION_DELAY_MS = 700;
 
 export default function SigmaEmbed({
@@ -39,11 +37,9 @@ export default function SigmaEmbed({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const iframeRef = useRef(null);
-  // bookmarkId (or, for create, a boolean flag) most recently sent, cleared
-  // once the matching outbound confirmation arrives. Sigma can fail these
-  // internally (e.g. a stale/deleted bookmark id) without ever telling us —
-  // cross-origin, so its uncaught errors never reach us as a workbook:error
-  // event — so each watchdog below self-heals if nothing arrives in time.
+  // Most recently sent bookmark action, cleared once its confirmation
+  // arrives. Sigma can fail these internally without telling us (cross-origin
+  // errors never reach us), so each watchdog below self-heals on timeout.
   const pendingCreateRef = useRef(false);
   const pendingUpdateIdRef = useRef(null);
   const pendingDeleteIdRef = useRef(null);
@@ -68,12 +64,9 @@ export default function SigmaEmbed({
   // explore" for explore mode) — there's no error we can surface for that case.
   // https://help.sigmacomputing.com/docs/inbound-event-reference
   const sendWorkbookMode = (nextMode) => {
-    // Entering Explore with an existing bookmark: select it FIRST (select has
-    // no documented prerequisite, unlike update) so the mode switch renders
-    // straight into the bookmarked state in one transition. The previous
-    // order — switch mode, then select ~700ms later — rendered the published
-    // version first and had to re-render once the delayed select landed,
-    // which only painted correctly after extra View/Explore toggling.
+    // Select before switching mode (select has no documented prerequisite,
+    // unlike update) so Explore renders straight into the bookmarked state —
+    // switching first and selecting after briefly showed the published version.
     if (nextMode === 'explore' && bookmarkId) {
       postToIframe({ type: 'workbook:bookmark:select', bookmarkId });
     }
@@ -108,11 +101,8 @@ export default function SigmaEmbed({
       const name = `${label || 'Exploration'} - bookmark`;
       postToIframe({ type: 'workbook:bookmark:create', name, isDefault: false, isShared: false });
       pendingCreateRef.current = true;
-      // Watchdog — if Sigma never confirms the create at all, don't leave the
-      // button stuck showing "Saving…" forever. Widened to 10s (see the
-      // update watchdog below) — confirmations can genuinely take longer
-      // than 4s, and firing early produces a false "didn't confirm" error
-      // even when the create actually succeeds moments later.
+      // Watchdog: 10s, since confirmations can genuinely take longer than a
+      // few seconds and firing early would falsely report failure.
       setTimeout(() => {
         if (pendingCreateRef.current) {
           pendingCreateRef.current = false;
@@ -123,30 +113,16 @@ export default function SigmaEmbed({
       return;
     }
     const targetId = bookmarkId;
-    // Deliberately NOT re-selecting here. The bookmark is already selected by
-    // this point — via the :bookmark URL param on load, or via
-    // sendWorkbookMode's select-before-switch when entering Explore.
-    // Re-selecting right before update reloads the bookmark to its
-    // last-saved state, discarding the very explore-mode edits we're trying
-    // to save — that's exactly what caused Sigma's "Cannot update bookmark,
-    // no explore changes made" error.
+    // Deliberately not re-selecting — the bookmark is already selected (URL
+    // param on load, or the select-before-switch above), and re-selecting
+    // here would reload it to its last-saved state, discarding the edits.
     pendingUpdateIdRef.current = targetId;
     postToIframe({ type: 'workbook:bookmark:update' });
-    // Watchdog — informational only. We originally auto-cleared the
-    // bookmark reference here, on the theory that "no response" meant a
-    // stale/deleted id (an uncaught error inside the iframe that never
-    // reaches us as workbook:error, since it's cross-origin). But Sigma often
-    // DOES send a real workbook:error for perfectly recoverable reasons
-    // (e.g. "no explore changes made") — those also hit this same timeout
-    // path, so auto-clearing here was destroying valid bookmarks on ordinary,
-    // recoverable failures. Only report it; never destroy user data on a
-    // mere absence of confirmation.
-    //
-    // Confirmed the update itself can genuinely succeed while still taking
-    // longer than 4s for onupdate to arrive — that was firing this "didn't
-    // confirm" message as a false negative. Widened to 10s; the onupdate
-    // handler isn't gated on this ref anyway, so a late confirmation still
-    // correctly overwrites this message with success once it arrives.
+    // Only report on timeout, never clear bookmarkId — a workbook:error can
+    // arrive for recoverable reasons (e.g. "no explore changes made") on this
+    // same timeout path, and update can genuinely succeed >10s late; the
+    // onupdate handler isn't gated on this ref, so a late confirmation still
+    // overwrites this message with success.
     setTimeout(() => {
       if (pendingUpdateIdRef.current === targetId) {
         pendingUpdateIdRef.current = null;
@@ -168,18 +144,11 @@ export default function SigmaEmbed({
     setConfirmingDelete(false);
     setDeleting(true);
     const targetId = bookmarkId;
-    // No select needed — delete only requires the bookmarkId itself, no
-    // "selected" prerequisite per Sigma's docs, and re-selecting here carries
-    // the same risk of disturbing state for no benefit (see handleSave).
+    // No select needed — delete only requires the bookmarkId, per Sigma's docs.
     pendingDeleteIdRef.current = targetId;
     postToIframe({ type: 'workbook:bookmark:delete', bookmarkId: targetId });
-    // Watchdog — same reasoning as the update path above: a broken
-    // reference can fail inside Sigma without ever telling us. Since the
-    // user's intent was to remove it anyway, treat "no confirmation" as
-    // good enough reason to forget it on our side and navigate back. Kept
-    // short (unlike update/create) — firing early here is harmless, since it
-    // just treats "no confirmation yet" as "gone", matching the user's
-    // actual intent regardless.
+    // Short watchdog: unlike update/create, "no confirmation" here just means
+    // treating it as gone, which matches the user's intent either way.
     setTimeout(() => {
       if (pendingDeleteIdRef.current === targetId) {
         pendingDeleteIdRef.current = null;
@@ -232,13 +201,10 @@ export default function SigmaEmbed({
         setFeedback({ type: 'success', text: 'Bookmark updated.' });
         setTimeout(() => sendWorkbookMode('view'), BOOKMARK_ACTION_DELAY_MS);
       } else if (data.type === 'workbook:exploreKey:onchange' && data.exploreKey === null && pendingUpdateIdRef.current) {
-        // Confirmed via live testing: this embed doesn't reliably fire
-        // workbook:bookmark:onupdate. Instead, exploreKey resets to null once
-        // the pending explore-mode changes have been consumed by a
-        // successful update — that's the real confirmation signal here.
-        // Scoped to only fire while we're actively awaiting an update, so it
-        // can't be misread as success in unrelated contexts (e.g. simply
-        // switching back to View resets exploreKey too).
+        // This embed doesn't reliably fire workbook:bookmark:onupdate;
+        // exploreKey resetting to null is the real update-confirmation
+        // signal. Gated on pendingUpdateIdRef so it's not misread as
+        // success elsewhere (switching to View also resets exploreKey).
         pendingUpdateIdRef.current = null;
         setSaving(false);
         setFeedback({ type: 'success', text: 'Bookmark updated.' });
@@ -279,17 +245,12 @@ export default function SigmaEmbed({
     return () => clearTimeout(timer);
   }, [feedback]);
 
-  // Note: opening via the tree's bookmark row (autoExplore) loads the
-  // bookmarked content directly via Sigma's :bookmark embed URL param (see
-  // the fetch effect below and lib/sigma-embed.js) — no postMessage select
-  // race against the iframe's own initial render. It lands in View mode,
-  // already showing the bookmarked content (confirmed View can render it).
-  // autoExplore also scopes Delete's visibility and gives this instance a
-  // distinct key in DashboardShell. Manually switching to Explore (below, via
-  // sendWorkbookMode) re-selects this bookmarkId so continued edits target
-  // the right bookmark, and covers the OTHER case — a plain-workbook open
-  // where the user later wants to Explore an existing bookmark that wasn't
-  // loaded via the URL param.
+  // autoExplore (opened via the tree's bookmark row) loads the bookmarked
+  // content directly via Sigma's :bookmark URL param — no postMessage select
+  // race — landing in View mode already showing it. It also scopes Delete's
+  // visibility. Manually switching to Explore still re-selects this
+  // bookmarkId, covering the case of exploring a bookmark not loaded via the
+  // URL param.
 
   // Notify parent of server-side generated JWT on mount
   useEffect(() => {
@@ -324,26 +285,19 @@ export default function SigmaEmbed({
         const params = new URLSearchParams();
         if (urlId) {
           params.set('urlId', urlId);
-          // Opened via the tree's bookmark row — ask the server to load
-          // straight into the bookmarked version via Sigma's :bookmark URL
-          // param, rather than selecting it after the fact via postMessage
-          // (which raced against the iframe's own render).
+          // Load straight into the bookmarked version via :bookmark rather
+          // than selecting it after the fact via postMessage.
           if (autoExplore) params.set('wantBookmark', '1');
         } else if (mode) {
           params.set('mode', mode);
         }
         if (org) params.set('org', org);
         if (sessionLength !== undefined) params.set('sessionLength', String(sessionLength));
-        // Team Swapping use case — the server resolves this slug to a team name
-        // and puts it in the JWT's `teams` claim. Without it, a client-side
-        // refetch (retry, or a session-length regenerate) would rebuild the JWT
-        // from Clerk metadata and silently drop the selected team.
+        // Resolved server-side into the JWT's claims — without these, a
+        // client refetch would rebuild the JWT from Clerk metadata and
+        // silently drop the selected team/identity.
         if (teamSlug) params.set('teamSlug', teamSlug);
-        // Sub-Address Swapping use case — same reasoning as teamSlug above,
-        // but resolves to BOTH sub and teams server-side (see /api/sigma/jwt).
         if (subAddressSlug) params.set('subAddressSlug', subAddressSlug);
-        // Team Swapping's interactive menu switches — only meaningful together
-        // with teamSlug, since that's what tells the server to honor them at all.
         if (menuVisible !== undefined) params.set('menu', menuVisible ? '1' : '0');
         if (menuPosition) params.set('pos', menuPosition);
         const qs = params.toString();

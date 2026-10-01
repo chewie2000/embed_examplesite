@@ -10,14 +10,10 @@ export const revalidate = 0;
 /**
  * Public, no-sign-on demo page: /interested
  *
- * Demonstrates an anonymous secured embed. The Sigma JWT is signed
- * SERVER-SIDE here with a STATIC `sub`, so every anonymous visitor maps to the
- * same Sigma embed user and can view the content WITHOUT authenticating to the
- * host site. No JWT-minting endpoint is exposed — the signed URL is generated
- * during this server render and handed to the iframe.
- *
- * This route is intentionally NOT listed in middleware.js's protected matcher
- * (only /dashboard(.*) is protected), so it is reachable anonymously.
+ * Every anonymous visitor maps to the same Sigma embed user via a static
+ * `sub` claim, signed server-side here — no JWT-minting endpoint is exposed.
+ * Not listed in middleware.js's protected matcher, so it's reachable
+ * without authenticating.
  */
 export default async function InterestedPage() {
   const staticSub = process.env.ANONYMOUS_SIGMA_SUB || 'anonymous@embedsuccess.com';
