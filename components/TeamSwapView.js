@@ -38,6 +38,7 @@ export default function TeamSwapView({ team, workbook, embedData, sigmaEmail, me
     const next = { ...menuState, ...patch };
     qs.set('menu', next.visible ? '1' : '0');
     qs.set('pos', next.position);
+    qs.set('assistant', next.assistant ? '1' : '0');
     router.push(`/dashboard/team-swap?${qs.toString()}`);
   }, [menuState, router, searchParams]);
 
@@ -142,6 +143,34 @@ export default function TeamSwapView({ team, workbook, embedData, sigmaEmail, me
                 ))}
               </div>
             </div>
+
+            <div className="flex items-center gap-2">
+              <InfoButton title="Showing the Assistant">
+                Turning this on appends{' '}
+                <code className="text-brand-600">:show_assistant=true</code> to the embed URL, after the{' '}
+                <code className="text-brand-600">:jwt</code> parameter (for example{' '}
+                <code className="text-brand-600">?:jwt=&lt;jwt&gt;&amp;:show_assistant=true</code>). Only
+                users whose account type has the <span className="font-medium">Use Assistant</span>{' '}
+                permission enabled can access the Assistant in the workbook — for everyone else the
+                parameter has no visible effect.
+              </InfoButton>
+              <span className="text-ink-secondary">Assistant</span>
+              <button
+                onClick={() => updateMenuState({ assistant: !menuState.assistant })}
+                role="switch"
+                aria-checked={menuState.assistant}
+                className={`relative w-9 h-5 rounded-full transition-colors ${
+                  menuState.assistant ? 'bg-brand-500' : 'bg-zinc-200'
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                    menuState.assistant ? 'translate-x-4' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+              <span className="text-ink-primary">{menuState.assistant ? 'Shown' : 'Hidden'}</span>
+            </div>
           </div>
         )}
 
@@ -171,12 +200,13 @@ export default function TeamSwapView({ team, workbook, embedData, sigmaEmail, me
               // Must include workbook.urlId — SigmaEmbed seeds its URL on
               // mount only, so switching files without a key change would
               // keep showing the previous one.
-              key={`${team.slug}:${workbook.urlId}:${menuState.visible}:${menuState.position}`}
+              key={`${team.slug}:${workbook.urlId}:${menuState.visible}:${menuState.position}:${menuState.assistant}`}
               urlId={workbook.urlId}
               label={`${team.name} — ${workbook.name}`}
               teamSlug={team.slug}
               menuVisible={menuState.visible}
               menuPosition={menuState.position}
+              assistantVisible={menuState.assistant}
               onJwt={(mode, jwt, embedUrl) => setJwt(mode, jwt, embedUrl, `${team.name} — ${workbook.name}`)}
               initialEmbedUrl={embedData?.embedUrl}
               initialJwt={embedData?.jwt}

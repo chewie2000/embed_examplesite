@@ -13,7 +13,7 @@ const BOOKMARK_ACTION_DELAY_MS = 700;
 export default function SigmaEmbed({
   mode = '', urlId, label, onJwt, initialEmbedUrl, initialJwt, sessionLength, refreshKey = 0,
   showModeToggle = false, initialBookmarkId = null, autoExplore = false, onBookmarkChange, onBookmarkDeleted,
-  teamSlug, subAddressSlug, menuVisible, menuPosition, org,
+  teamSlug, subAddressSlug, menuVisible, menuPosition, assistantVisible, org,
 }) {
   // Distinct key for ad hoc content-browser embeds (discovered urlId) vs the
   // pre-configured {mode}_SIGMA_BASE_URL examples — used for onJwt/inspector keying.
@@ -300,6 +300,7 @@ export default function SigmaEmbed({
         if (subAddressSlug) params.set('subAddressSlug', subAddressSlug);
         if (menuVisible !== undefined) params.set('menu', menuVisible ? '1' : '0');
         if (menuPosition) params.set('pos', menuPosition);
+        if (assistantVisible !== undefined) params.set('assistant', assistantVisible ? '1' : '0');
         const qs = params.toString();
         const res = await fetch(`/api/sigma/jwt${qs ? `?${qs}` : ''}`);
         const data = await res.json();
@@ -313,7 +314,7 @@ export default function SigmaEmbed({
       }
     }
     fetchEmbedUrl();
-  }, [mode, urlId, autoExplore, teamSlug, subAddressSlug, menuVisible, menuPosition, org, sessionLength, refreshKey, localRefreshKey]);
+  }, [mode, urlId, autoExplore, teamSlug, subAddressSlug, menuVisible, menuPosition, assistantVisible, org, sessionLength, refreshKey, localRefreshKey]);
 
   // Progressive loading warning during JWT fetch
   useEffect(() => {

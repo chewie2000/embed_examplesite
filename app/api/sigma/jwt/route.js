@@ -67,7 +67,7 @@ export async function GET(request) {
 
   try {
     const urlParams = (subAddress || swapTeam)
-      ? menuStateUrlParams(resolveMenuState({ menu: searchParams.get('menu'), pos: searchParams.get('pos') }))
+      ? menuStateUrlParams(resolveMenuState({ menu: searchParams.get('menu'), pos: searchParams.get('pos'), assistant: searchParams.get('assistant') }))
       : (urlId ? {} : resolveUrlParams(meta, mode));
 
     // Never trust a client-supplied bookmark id — look it up server-side.

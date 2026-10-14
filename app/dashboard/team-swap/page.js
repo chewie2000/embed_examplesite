@@ -11,9 +11,9 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function TeamSwapPage({ searchParams }) {
-  const { team: slug, urlId, menu, pos } = await searchParams;
+  const { team: slug, urlId, menu, pos, assistant } = await searchParams;
   const team = getSwapTeam(slug);
-  const menuState = resolveMenuState({ menu, pos });
+  const menuState = resolveMenuState({ menu, pos, assistant });
 
   const user = await currentUser();
   if (!user) redirect('/sign-in');
