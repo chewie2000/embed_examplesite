@@ -17,13 +17,14 @@ export const revalidate = 0;
  * which is also the Sigma member email we resolve here.
  *
  * `?org=` picks the Sigma org: 'legacy' (Legacy Examples' sidebar, a
- * different org than the rest of the app) or empty for the default org
- * (Folder Explorer). Anything else falls back to 'legacy', the original
- * behaviour, so an unknown value can't select an arbitrary config.
+ * different org than the rest of the app); anything else, including
+ * 'default' or a missing value, is the default org (Folder Explorer).
+ * Only the literal 'legacy' can select the override, so an unknown value
+ * can't select an arbitrary config.
  */
 export async function GET(request) {
   const orgParam = new URL(request.url).searchParams.get('org');
-  const org = orgParam === '' ? '' : 'legacy';
+  const org = orgParam === 'legacy' ? 'legacy' : '';
 
   const { userId } = await auth();
   if (!userId) {

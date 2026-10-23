@@ -139,7 +139,7 @@ A third kind of nav item (`kind: 'tree'`) renders `ContentTree` instead of an em
 - REST API auth is a **separate** OAuth token exchange (`POST /v2/auth/token`) — see `lib/sigma-api.js`. Needs `SIGMA_API_BASE_URL` (the region-specific API host) and prefers `SIGMA_API_CLIENT_ID/SECRET`, falling back to the embed `SIGMA_CLIENT_ID/SECRET`.
 - The embed user identity is the same `sigmaEmail` used by the JWT route (Clerk `publicMetadata.sigmaEmail`).
 - Embed users are provisioned lazily — the tree shows an empty/"not provisioned" state until the user has embedded once **and** has been granted access to content in the `EMBED` workspace.
-- Always resolves against `org: 'legacy'` (see below) — the Content Browser only ever renders inside Legacy Examples' sidebar, which points at the pre-switch org.
+- `/api/sigma/tree?org=` picks the org: `legacy` (Legacy Examples' sidebar, the pre-switch org) or empty for the default org (Folder Explorer, `/dashboard/folder-explorer`, which is just this tree with no example switcher).
 
 ### Org override (`org` param) — Legacy Examples only
 

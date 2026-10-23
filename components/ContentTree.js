@@ -153,7 +153,7 @@ function TreeNode({ node, depth, compact, selectedUrlId, selectedBookmarkId, onS
  * @param {function} [onSelectWorkbook] Called with the clicked workbook node ({ urlId, name, ... }).
  * @param {function} [onSelectBookmark] Called with the clicked bookmark node ({ urlId, bookmarkId, name }).
  * @param {number}  [refreshSignal]   Bump this to force a refetch (e.g. after a bookmark is created/deleted).
- * @param {string}  [org]             Which Sigma org to read the tree from ('legacy' or default).
+ * @param {string}  [org]             Which Sigma org to read the tree from: 'legacy', or 'default' for the app's main org.
  */
 export default function ContentTree({ compact = false, selectedUrlId, selectedBookmarkId, onSelectWorkbook, onSelectBookmark, refreshSignal, org = 'legacy' }) {
   const [state, setState] = useState({ status: 'loading' });

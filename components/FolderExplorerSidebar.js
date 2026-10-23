@@ -55,7 +55,7 @@ export default function FolderExplorerSidebar() {
         <div className="flex-1 min-h-0 overflow-y-auto px-1 pb-2">
           <ContentTree
             compact
-            org=""
+            org="default"
             selectedUrlId={isBrowseView && !browseBookmarkId ? browseUrlId : undefined}
             selectedBookmarkId={isBrowseView ? browseBookmarkId : undefined}
             onSelectWorkbook={handleSelectWorkbook}
