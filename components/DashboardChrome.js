@@ -10,6 +10,7 @@ import { useDashboardChrome } from '@/lib/dashboard-context';
 // Breadcrumb prefix per area of the dashboard. The page itself supplies the
 // second half via setPageTitle().
 function sectionLabel(pathname) {
+  if (pathname.startsWith('/dashboard/folder-explorer')) return 'Folder Explorer';
   if (pathname.startsWith('/dashboard/legacy/browse/')) return 'Content Browser';
   if (pathname.startsWith('/dashboard/legacy')) return 'Legacy Examples';
   return 'Use Cases';

@@ -16,11 +16,15 @@ export const revalidate = 0;
  * (falling back to the Clerk login email) is the embed user's JWT `sub`,
  * which is also the Sigma member email we resolve here.
  *
- * Always resolves against org: 'legacy' — the Content Browser only ever
- * renders inside Legacy Examples' sidebar, which points at a different org
- * than the rest of the app. Not a query param since there's no other caller.
+ * `?org=` picks the Sigma org: 'legacy' (Legacy Examples' sidebar, a
+ * different org than the rest of the app) or empty for the default org
+ * (Folder Explorer). Anything else falls back to 'legacy', the original
+ * behaviour, so an unknown value can't select an arbitrary config.
  */
-export async function GET() {
+export async function GET(request) {
+  const orgParam = new URL(request.url).searchParams.get('org');
+  const org = orgParam === '' ? '' : 'legacy';
+
   const { userId } = await auth();
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -32,7 +36,7 @@ export async function GET() {
   const sigmaEmail = meta.sigmaEmail || loginEmail;
 
   try {
-    const result = await buildEmbedUserTree(sigmaEmail, 'legacy');
+    const result = await buildEmbedUserTree(sigmaEmail, org);
     attachBookmarks(result.tree, getBookmarksMap(user));
 
     console.log('[/api/sigma/tree] sigmaEmail:', sigmaEmail);

@@ -153,21 +153,22 @@ function TreeNode({ node, depth, compact, selectedUrlId, selectedBookmarkId, onS
  * @param {function} [onSelectWorkbook] Called with the clicked workbook node ({ urlId, name, ... }).
  * @param {function} [onSelectBookmark] Called with the clicked bookmark node ({ urlId, bookmarkId, name }).
  * @param {number}  [refreshSignal]   Bump this to force a refetch (e.g. after a bookmark is created/deleted).
+ * @param {string}  [org]             Which Sigma org to read the tree from ('legacy' or default).
  */
-export default function ContentTree({ compact = false, selectedUrlId, selectedBookmarkId, onSelectWorkbook, onSelectBookmark, refreshSignal }) {
+export default function ContentTree({ compact = false, selectedUrlId, selectedBookmarkId, onSelectWorkbook, onSelectBookmark, refreshSignal, org = 'legacy' }) {
   const [state, setState] = useState({ status: 'loading' });
 
   const load = useCallback(async () => {
     setState({ status: 'loading' });
     try {
-      const res = await fetch('/api/sigma/tree');
+      const res = await fetch(`/api/sigma/tree?org=${encodeURIComponent(org)}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to load content tree.');
       setState({ status: 'ready', data });
     } catch (err) {
       setState({ status: 'error', error: err.message });
     }
-  }, []);
+  }, [org]);
 
   useEffect(() => { load(); }, [load, refreshSignal]);
 
