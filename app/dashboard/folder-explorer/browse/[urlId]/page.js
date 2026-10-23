@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useMemo } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import SigmaEmbed from '@/components/SigmaEmbed';
+import EmbedMenuControls from '@/components/EmbedMenuControls';
+import { resolveMenuState } from '@/lib/embed-url-params';
 import { useDashboardChrome } from '@/lib/dashboard-context';
 
 /**
@@ -22,6 +24,22 @@ export default function FolderExplorerBrowsePage() {
   const bookmarkId = searchParams.get('bookmark') || null;
   const autoExplore = searchParams.get('auto') === '1';
   const parentName = searchParams.get('parent') || name;
+
+  // Menu/Assistant switches live in the URL beside name/bookmark, so a refresh
+  // or shared link keeps them.
+  const menuState = useMemo(
+    () => resolveMenuState({ menu: searchParams.get('menu'), pos: searchParams.get('pos'), assistant: searchParams.get('assistant') }),
+    [searchParams]
+  );
+
+  const updateMenuState = useCallback((patch) => {
+    const next = { ...menuState, ...patch };
+    const qs = new URLSearchParams(searchParams.toString());
+    qs.set('menu', next.visible ? '1' : '0');
+    qs.set('pos', next.position);
+    qs.set('assistant', next.assistant ? '1' : '0');
+    router.replace(`/dashboard/folder-explorer/browse/${urlId}?${qs.toString()}`);
+  }, [menuState, router, searchParams, urlId]);
 
   useEffect(() => {
     setPageTitle(name);
@@ -45,20 +63,26 @@ export default function FolderExplorerBrowsePage() {
   }, [bumpTreeRefresh, parentName, router, urlId]);
 
   return (
-    <div className="rounded-xl border border-black/[0.06] shadow-card overflow-hidden bg-white h-full min-h-[420px] flex flex-col">
-      <SigmaEmbed
-        key={`${urlId}:${bookmarkId ?? 'plain'}`}
-        urlId={urlId}
-        label={name}
-        onJwt={(mode, jwt, embedUrl) => setJwt(mode, jwt, embedUrl, name)}
-        sessionLength={sessionLength}
-        refreshKey={refreshKey}
-        showModeToggle
-        initialBookmarkId={bookmarkId}
-        autoExplore={autoExplore}
-        onBookmarkChange={handleBookmarkChange}
-        onBookmarkDeleted={handleBookmarkDeleted}
-      />
+    <div className="flex flex-col gap-3 h-full min-h-0">
+      <EmbedMenuControls menuState={menuState} onChange={updateMenuState} />
+      <div className="flex-1 min-h-[420px] rounded-xl border border-black/[0.06] shadow-card overflow-hidden bg-white flex flex-col">
+        <SigmaEmbed
+          key={`${urlId}:${bookmarkId ?? 'plain'}:${menuState.visible}:${menuState.position}:${menuState.assistant}`}
+          urlId={urlId}
+          label={name}
+          onJwt={(mode, jwt, embedUrl) => setJwt(mode, jwt, embedUrl, name)}
+          sessionLength={sessionLength}
+          refreshKey={refreshKey}
+          showModeToggle
+          menuVisible={menuState.visible}
+          menuPosition={menuState.position}
+          assistantVisible={menuState.assistant}
+          initialBookmarkId={bookmarkId}
+          autoExplore={autoExplore}
+          onBookmarkChange={handleBookmarkChange}
+          onBookmarkDeleted={handleBookmarkDeleted}
+        />
+      </div>
     </div>
   );
 }

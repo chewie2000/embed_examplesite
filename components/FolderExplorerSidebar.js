@@ -20,13 +20,22 @@ export default function FolderExplorerSidebar() {
   const browseUrlId = isBrowseView ? pathname.split(base)[1] : undefined;
   const browseBookmarkId = searchParams.get('bookmark') || undefined;
 
+  // Carry the menu/Assistant switches across selections so they stay put
+  // while browsing.
+  const carryMenuParams = (qs) => {
+    for (const k of ['menu', 'pos', 'assistant']) {
+      if (searchParams.has(k)) qs.set(k, searchParams.get(k));
+    }
+    return qs;
+  };
+
   const handleSelectWorkbook = (node) => {
-    const qs = new URLSearchParams({ name: node.name });
+    const qs = carryMenuParams(new URLSearchParams({ name: node.name }));
     router.push(`${base}${node.urlId}?${qs.toString()}`);
   };
 
   const handleSelectBookmark = (node) => {
-    const qs = new URLSearchParams({ name: node.name, bookmark: node.bookmarkId, auto: '1' });
+    const qs = carryMenuParams(new URLSearchParams({ name: node.name, bookmark: node.bookmarkId, auto: '1' }));
     if (node.parentName) qs.set('parent', node.parentName);
     router.push(`${base}${node.urlId}?${qs.toString()}`);
   };

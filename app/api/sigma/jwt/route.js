@@ -66,7 +66,10 @@ export async function GET(request) {
   const sessionLength = sessionLengthParam ? parseInt(sessionLengthParam) : undefined;
 
   try {
-    const urlParams = (subAddress || swapTeam)
+    // Menu/Assistant switches (Team/Sub-Address Swapping, Folder Explorer)
+    // always send these params; legacy callers send none.
+    const hasMenuParams = ['menu', 'pos', 'assistant'].some((k) => searchParams.has(k));
+    const urlParams = (subAddress || swapTeam || hasMenuParams)
       ? menuStateUrlParams(resolveMenuState({ menu: searchParams.get('menu'), pos: searchParams.get('pos'), assistant: searchParams.get('assistant') }))
       : (urlId ? {} : resolveUrlParams(meta, mode));
 
