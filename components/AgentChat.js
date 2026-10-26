@@ -5,13 +5,15 @@ import { useState, useRef, useEffect } from 'react';
 /**
  * Chat panel for one Sigma workbook agent. The Sigma agent API is stateless,
  * so this keeps the replayable `history` returned by each run and sends it
- * back with the next question. Remount (via `key`) to reset on agent change.
+ * back with the next question. The parent remounts it (via `key`) to switch
+ * conversation; `conversation` is only read on mount.
  */
-export default function AgentChat({ agent }) {
-  const [messages, setMessages] = useState([]); // { role: 'user' | 'assistant' | 'error', text }
-  const [history, setHistory] = useState([]);
+export default function AgentChat({ agent, conversation, onSaved, onNew }) {
+  const [messages, setMessages] = useState(conversation?.messages ?? []); // { role: 'user' | 'assistant' | 'error', text, pending? }
+  const [history, setHistory] = useState(conversation?.history ?? []);
   const [input, setInput] = useState('');
   const [status, setStatus] = useState(null); // string while a run is in flight
+  const idRef = useRef(conversation?.id ?? null);
   const abortRef = useRef(null);
   const endRef = useRef(null);
 
@@ -60,7 +62,22 @@ export default function AgentChat({ agent }) {
             const evt = JSON.parse(data);
             if (evt.type === 'status' && !streamed) setStatus(evt.text);
             if (evt.type === 'delta') { streamed += evt.text; patchLast({ text: streamed, pending: false }); }
-            if (evt.type === 'done') { finished = true; patchLast({ text: evt.text, pending: false }); setHistory(evt.history || []); }
+            if (evt.type === 'done') {
+              finished = true;
+              patchLast({ text: evt.text, pending: false });
+              setHistory(evt.history || []);
+              if (!idRef.current) idRef.current = crypto.randomUUID();
+              // Persist from the state we just built, not from React state (not yet flushed).
+              onSaved({
+                id: idRef.current,
+                workbookId: agent.workbookId,
+                agentId: agent.agentId,
+                agentName: agent.name,
+                workbookName: agent.workbookName,
+                messages: [...savedMessages(messages), { role: 'user', text: message }, { role: 'assistant', text: evt.text }],
+                history: evt.history || [],
+              });
+            }
             if (evt.type === 'error') throw new Error(evt.message);
           }
           split = buffer.indexOf('\n\n');
@@ -79,19 +96,12 @@ export default function AgentChat({ agent }) {
     }
   }
 
-  function reset() {
-    abortRef.current?.abort();
-    setMessages([]);
-    setHistory([]);
-  }
-
   return (
     <div className="flex flex-col h-full min-h-0">
       <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
         {messages.length === 0 && (
           <p className="text-xs text-ink-secondary leading-relaxed">
-            Ask <span className="font-medium text-ink-primary">{agent.name}</span> a question about the data in{' '}
-            <span className="font-medium text-ink-primary">{agent.workbookName}</span>.
+            Ask <span className="font-medium text-ink-primary">{agent.name}</span> a question.
             {agent.description && <> {agent.description}</>}
           </p>
         )}
@@ -115,16 +125,21 @@ export default function AgentChat({ agent }) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           maxLength={4000}
-          placeholder="Ask about this workbook’s data…"
+          placeholder="Ask this agent a question…"
           className="flex-1 text-sm rounded-lg border border-black/[0.1] px-3 py-2 outline-none focus:border-black/30"
         />
         <button type="submit" className="text-xs font-medium rounded-lg bg-ink-primary text-white px-3 py-2">
           {busy ? 'Stop' : 'Send'}
         </button>
-        <button type="button" onClick={reset} disabled={busy || !messages.length} className="text-xs rounded-lg border border-black/[0.1] px-3 py-2 disabled:opacity-40">
+        <button type="button" onClick={onNew} disabled={busy} className="text-xs rounded-lg border border-black/[0.1] px-3 py-2 disabled:opacity-40">
           New
         </button>
       </form>
     </div>
   );
+}
+
+// Drop transient bubbles (errors, pending placeholders); keep real turns.
+function savedMessages(messages) {
+  return messages.filter((m) => (m.role === 'user' || m.role === 'assistant') && !m.pending && m.text);
 }
