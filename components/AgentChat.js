@@ -8,7 +8,7 @@ import { useState, useRef, useEffect } from 'react';
  * back with the next question. The parent remounts it (via `key`) to switch
  * conversation; `conversation` is only read on mount.
  */
-export default function AgentChat({ agent, conversation, onSaved, onNew }) {
+export default function AgentChat({ agent, conversation, onSaved, onNew, onTrace }) {
   const [messages, setMessages] = useState(conversation?.messages ?? []); // { role: 'user' | 'assistant' | 'error', text, pending? }
   const [history, setHistory] = useState(conversation?.history ?? []);
   const [input, setInput] = useState('');
@@ -60,6 +60,7 @@ export default function AgentChat({ agent, conversation, onSaved, onNew }) {
           const data = block.split('\n').filter((l) => l.startsWith('data:')).map((l) => l.slice(5).trim()).join('\n');
           if (data) {
             const evt = JSON.parse(data);
+            if (evt.type === 'trace') onTrace?.(evt.entry);
             if (evt.type === 'status' && !streamed) setStatus(evt.text);
             if (evt.type === 'delta') { streamed += evt.text; patchLast({ text: streamed, pending: false }); }
             if (evt.type === 'done') {

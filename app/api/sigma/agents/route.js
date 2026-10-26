@@ -18,8 +18,9 @@ export async function GET() {
 
   const email = user.publicMetadata?.sigmaEmail || user.emailAddresses[0]?.emailAddress;
   try {
-    const agents = await discoverUserAgents(email);
-    return NextResponse.json({ email, agents }, { headers: { 'Cache-Control': 'no-store' } });
+    const trace = [];
+    const agents = await discoverUserAgents(email, trace);
+    return NextResponse.json({ email, agents, trace }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     console.error('[/api/sigma/agents]', error.message);
     return NextResponse.json({ error: error.message }, { status: 502 });

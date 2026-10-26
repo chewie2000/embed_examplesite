@@ -4,6 +4,7 @@ import {
   AGENT_LIMITS, isSafeSigmaId, validateUserMessage, sanitizeHistory, requireUserAgent,
   startAgentRun, createAgentEventParser, extractAssistantText, replayableOutput,
 } from '@/lib/sigma-agents';
+import { record } from '@/lib/sigma-trace';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
@@ -42,8 +43,9 @@ export async function POST(request) {
   if (!validation.ok) return json({ error: validation.error }, 400);
   if (!allowRequest(email)) return json({ error: 'Too many agent requests. Wait a minute and try again.' }, 429);
 
+  const early = [];
   try {
-    await requireUserAgent(email, workbookId, agentId);
+    await requireUserAgent(email, workbookId, agentId, early);
   } catch (error) {
     return json({ error: error.message }, error.status || 502);
   }
@@ -57,11 +59,17 @@ export async function POST(request) {
       const send = (payload) => controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
       // Warehouse lookups can leave the stream silent for 30s+; comments keep proxies open.
       const heartbeat = setInterval(() => controller.enqueue(encoder.encode(': keep-alive\n\n')), 10_000);
+      // Every Sigma call is mirrored to the browser as a `trace` event for the
+      // walkthrough's live call view. Entries recorded before the stream opened
+      // (the access check) are flushed first.
+      const trace = { length: 0, push(entry) { this.length += 1; send({ type: 'trace', entry }); } };
+      early.forEach((entry) => trace.push(entry));
+      const started = Date.now();
       const abort = new AbortController();
       request.signal.addEventListener('abort', () => abort.abort());
 
       try {
-        const upstream = await startAgentRun({ workbookId, agentId, messages, email, signal: abort.signal });
+        const upstream = await startAgentRun({ workbookId, agentId, messages, email, signal: abort.signal, trace });
         if (!upstream.ok) {
           const text = await upstream.text();
           let message = 'The workbook agent could not answer.';
@@ -74,8 +82,10 @@ export async function POST(request) {
         const decoder = new TextDecoder();
         let streamed = '';
         let upstreamError = null;
+        const counts = { status: 0, delta: 0, error: 0 };
         const handle = (events) => {
           for (const event of events) {
+            if (counts[event.type] != null) counts[event.type] += 1;
             if (event.type === 'error') upstreamError = upstreamError || event;
             else if (event.type === 'delta') { streamed += event.text; send({ type: 'delta', text: event.text }); }
             else if (event.type === 'status') send({ type: 'status', text: event.text });
@@ -83,6 +93,21 @@ export async function POST(request) {
         };
         for await (const chunk of upstream.body) handle(parser.push(decoder.decode(chunk, { stream: true })));
         handle(parser.finish());
+
+        const finalRun = parser.finalRun;
+        record(trace, {
+          step: 4,
+          label: 'Read the streamed answer',
+          method: 'SSE',
+          path: `/v2/workbooks/${workbookId}/agents/${agentId}`,
+          status: upstream.status,
+          ms: Date.now() - started,
+          response: {
+            events: { 'tool/status': counts.status, 'answer deltas': counts.delta, errors: counts.error, 'final run object': finalRun ? 1 : 0 },
+            run: finalRun ? { runId: finalRun.runId, status: finalRun.status, usage: finalRun.usage, incompleteDetails: finalRun.incompleteDetails ?? null } : null,
+          },
+          note: 'Status and delta events arrive while the agent works; the final agent.run object carries the full output used to continue the conversation.',
+        });
 
         if (upstreamError) { send({ type: 'error', message: upstreamError.message }); return; }
 
