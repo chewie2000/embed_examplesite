@@ -29,7 +29,7 @@ export default function AgentChat({ agent, conversation, onSaved, onNew, onTrace
     if (!message) return;
     setInput('');
     setMessages((prev) => [...prev, { role: 'user', text: message }, { role: 'assistant', text: '', pending: true }]);
-    setStatus('Checking workbook data…');
+    setStatus('Thinking…');
 
     const controller = new AbortController();
     abortRef.current = controller;
