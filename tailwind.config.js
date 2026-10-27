@@ -38,6 +38,16 @@ module.exports = {
         mono: ['var(--font-mono)'],
         display: ['var(--font-display)'],
       },
+      keyframes: {
+        'chat-in': { '0%': { opacity: '0', transform: 'translateY(6px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+        'chat-dot': { '0%, 80%, 100%': { opacity: '0.25', transform: 'scale(0.8)' }, '40%': { opacity: '1', transform: 'scale(1)' } },
+        'chat-caret': { '0%, 100%': { opacity: '1' }, '50%': { opacity: '0' } },
+      },
+      animation: {
+        'chat-in': 'chat-in 0.25s ease-out both',
+        'chat-dot': 'chat-dot 1.2s ease-in-out infinite',
+        'chat-caret': 'chat-caret 1s steps(1) infinite',
+      },
       boxShadow: {
         // Sigma's cards use a huge, near-invisible, blue-tinted diffuse glow —
         // not a crisp drop shadow.

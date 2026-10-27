@@ -154,7 +154,7 @@ export default function AgentChatPage() {
                   <AgentChat key={active.chatKey} agent={selected} conversation={activeConversation} onSaved={handleSaved} onNew={startNew} onTrace={addCalls} />
                 </div>
                 <p className="shrink-0 px-4 py-1.5 text-[11px] leading-snug text-ink-secondary border-t border-black/[0.06]">
-                  The agent list is checked as you. Answers come from the app’s API client, so they aren’t limited by your own row-level security. Conversations are saved in this browser only.{' '}
+                  The agents are listed and run as you, so answers respect your own Sigma permissions and row-level security. Conversations are saved in this browser only.{' '}
                   <button type="button" onClick={() => setTab('how')} className="underline hover:text-ink-primary">How this works</button>
                 </p>
               </>

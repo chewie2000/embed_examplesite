@@ -31,8 +31,8 @@ const STEPS = [
     endpoint: 'POST /v2/auth/token',
     docs: [DOC.creds, DOC.token, DOC.start],
     body: [
-      'Create an API client in Sigma (Administration → Developer Access) and keep its client ID and secret on your server. Exchange them for a short-lived bearer token using the client-credentials grant.',
-      'Per Sigma’s docs, the credentials must belong to a user with at least Can view access to the workbook that holds the agent, because the agent runs with that user’s permissions. The API host depends on your Sigma cloud and region (for example AWS US is aws-api.sigmacomputing.com). Cache the token and reuse it until just before it expires.',
+      'Create an API client in Sigma (Administration → Developer Access) and keep its client ID and secret on your server. Exchange them for a short-lived bearer token using the client-credentials grant. In this pattern that token is the actor: its job is to ask Sigma for a token for each end user (step 2). The agent itself is run with the user’s token, not this one.',
+      'The API host depends on your Sigma cloud and region (for example AWS US is aws-api.sigmacomputing.com). Cache the token and reuse it until just before it expires.',
     ],
     curl: `curl -X POST "$SIGMA_API/v2/auth/token" \\
   -d grant_type=client_credentials \\
@@ -57,7 +57,7 @@ const { access_token, expires_in } = await res.json();`,
     body: [
       'Each workbook agent belongs to a workbook. List a workbook’s agents to get each agentId, name and description. There is also an org-wide list, GET /v2/workbookAgents.',
       'In our testing the org-wide list returned only agents the caller can edit, so for an API client that merely views them it can come back empty. Asking each workbook directly did return the agent.',
-      'To list agents as the signed-in user rather than as your API client, exchange for a user token first (below). The token acts as the user, with your API client as the actor, so Sigma answers with what that user can see. Sigma’s docs describe this as an admin-level flow: the caller needs the Admin account type.',
+      'List agents as the signed-in user rather than as your API client: exchange for a user token first (below). The token acts as the user, with your API client as the actor, so Sigma answers with what that user can see. Keep that user token and reuse it to run the agent in step 3. Sigma’s docs describe impersonation as an admin-level flow: the API client’s owner needs the Admin account type.',
     ],
     curl: `curl "$SIGMA_API/v2/workbooks/$WORKBOOK_ID/agents" \\
   -H "Authorization: Bearer $TOKEN"`,
@@ -98,7 +98,7 @@ const agents = await (await fetch(
     docs: [DOC.runAgent, DOC.callApi],
     body: [
       'Send the conversation as a list of messages. Set stream to true to receive the answer as it is written, and maxTurns to cap how many tool steps the agent may take. metadata is free-form and is yours to use for tracing.',
-      'The agent runs its own tools against the workbook’s data sources, using the instructions its builder configured in Sigma. Your app does not choose the SQL.',
+      'Call this with the user token from step 2. The agent runs its own tools against the workbook’s data sources, using the instructions its builder configured in Sigma, and applies that user’s permissions and row-level security. Your app does not choose the SQL. The user needs at least Can view on the workbook; otherwise Sigma answers 403.',
     ],
     curl: `curl -X POST "$SIGMA_API/v2/workbooks/$WORKBOOK_ID/agents/$AGENT_ID" \\
   -H "Authorization: Bearer $TOKEN" \\
@@ -187,10 +187,9 @@ const body = { messages: [...history, { role: 'user', content: nextQuestion }], 
 ];
 
 const IDENTITY_ROWS = [
-  { how: 'API client token (client credentials)', result: 'Runs the agent', status: 'Verified 26 Oct 2026', tone: 'ok', note: 'The run is attributed to the API client’s own service user, not to the person using your app.' },
-  { how: 'Token exchange, acting as the user', result: '403 permission_denied: “Sigma agents can only be run by an authenticated user.”', status: 'Verified 26 Oct 2026, for the one user tried', tone: 'bad', note: 'The token genuinely identifies the user (with your API client as the actor), and the agent run refused it. It worked for listing what the user can see. Sigma’s own guide to building a custom agent UI says to impersonate the user on each call, which is not what we saw, so this may depend on the user (for example their account type) or on the platform version. We are checking.' },
-  { how: 'impersonate=<email> on the token request', result: 'Runs, but is not impersonating', status: 'Verified 26 Oct 2026', tone: 'warn', note: 'The token that comes back is identical to the plain API client token. Sigma ignores the parameter, so do not treat it as a way to run as the user.' },
-  { how: 'A real user session (for example Sigma’s own MCP connector, signed in as the user)', result: 'Runs the agent', status: 'Verified 26 Oct 2026', tone: 'ok', note: 'Shows Sigma can run agents as a genuine signed-in user. Whether an app can obtain such a token for its end users is still being investigated.' },
+  { how: 'Token exchange, acting as the user (what this demo uses)', result: 'Runs the agent as that user', status: 'Verified 27 Oct 2026 for four users: admin and build (internal), build and view (embed)', tone: 'ok', note: 'Streaming works too. Sigma applies the user’s own permissions and row-level security, and the run is attributed to them. This is the pattern Sigma’s guide to embedding an agent recommends for a custom UI.' },
+  { how: 'API client token (client credentials)', result: 'Runs the agent as the API client’s own service user', status: 'Verified 26 and 27 Oct 2026', tone: 'warn', note: 'Works, but every end user would share one identity, so answers are not narrowed by the person’s own row-level security. Use it for server-side jobs, not for end users in your app.' },
+  { how: 'impersonate=<email> on the token request', result: 'Not impersonating', status: 'Verified 26 Oct 2026', tone: 'bad', note: 'The token that comes back is identical to the plain API client token. Sigma ignores the parameter, so use the token exchange above instead.' },
 ];
 
 const TONE = { ok: 'text-mint-ink', bad: 'text-red-600', warn: 'text-amber-700' };
@@ -220,8 +219,7 @@ export default function AgentWalkthrough({ onShowLive }) {
             <button type="button" onClick={() => onShowLive(3)} className="shrink-0 text-xs rounded-lg border border-brand-500/30 bg-brand-50 text-brand-600 px-2.5 py-1">See it live</button>
           </div>
           <p className="mt-2 text-sm text-ink-secondary leading-relaxed">
-            This is the part to design carefully. Per Sigma’s docs, the API runs the agent with the calling user’s permissions and row-level security, so the question is which user that is. We tested each way of getting a token against the same agent and the same question.
-          </p>
+            Per Sigma’s docs, the API runs the agent with the calling user’s permissions and row-level security, so what matters is which user the token identifies. We tested each way of getting a token against the same agent and the same question.</p>
           <div className="mt-3 divide-y divide-black/[0.06] border border-black/[0.06] rounded-lg">
             {IDENTITY_ROWS.map((row) => (
               <div key={row.how} className="p-3">
@@ -233,10 +231,9 @@ export default function AgentWalkthrough({ onShowLive }) {
             ))}
           </div>
           <div className="mt-3 text-sm text-ink-secondary leading-relaxed space-y-2">
-            <p><span className="font-medium text-ink-primary">What this demo does:</span> it checks what the signed-in user can see (step 2, as the user) and then runs the agent with the API client’s own credentials (step 3). The check limits which agents a user is offered. The run uses the API client’s user, so the agent sees what that user can see, which is not narrowed by the person’s own row-level security.</p>
-            <p><span className="font-medium text-ink-primary">Agents that use external tools</span> (for example GitHub or Notion through MCP) may need the connection to be authorised by a real user. The reference app reports a “re-authorize this MCP server” message when such an agent is run as the API client. Reported, not yet reproduced here.</p>
+            <p><span className="font-medium text-ink-primary">What this demo does:</span> it exchanges the API client’s token for the signed-in user’s token once (step 2), uses it to list the agents that user can reach, then uses the same token to run the agent (step 3). Because the run is the user’s, a person only gets answers from data they could see in Sigma. The server also re-checks that the agent is in the user’s list before each run, so a tampered request cannot name an agent the user was never offered. If the token exchange fails, the demo stops rather than falling back to the API client’s token.</p>
+            <p><span className="font-medium text-ink-primary">Not yet verified:</span> that row-level security narrows an agent’s answers for different users (the test workbook has none), and agents that use external tools such as GitHub or Notion through MCP, which may need each user to authorise the connection.</p>
             <DocLinks docs={[DOC.callApi, DOC.embedAgent, DOC.impersonate]} />
-            <p className="text-xs">Still being investigated: whether impersonating a different user (or one with another account type) can run an agent as Sigma’s docs describe, and whether an embedded end user can get a real user-authenticated token.</p>
           </div>
         </section>
 

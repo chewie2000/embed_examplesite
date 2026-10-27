@@ -74,6 +74,8 @@ export async function POST(request) {
           const text = await upstream.text();
           let message = 'The workbook agent could not answer.';
           try { const parsed = JSON.parse(text); message = parsed.message || parsed.error || message; } catch { /* keep default */ }
+          // The run is authorised as the user, so a refusal means that user lacks access.
+          if (upstream.status === 403) message = 'Sigma did not allow you to run this agent. Ask a workbook owner for at least Can view access.';
           send({ type: 'error', message });
           return;
         }
@@ -126,7 +128,7 @@ export async function POST(request) {
           return;
         }
         const output = Array.isArray(run?.output) ? replayableOutput(run.output) : [{ role: 'assistant', content: text }];
-        send({ type: 'done', text, runId: run?.runId || null, status: run?.status || 'completed', history: [...history, { role: 'user', content: validation.text }, ...output] });
+        send({ type: 'done', text, runId: run?.runId || null, status: run?.status || 'completed', usage: run?.usage || null, history: [...history, { role: 'user', content: validation.text }, ...output] });
       } catch (error) {
         if (!abort.signal.aborted) {
           console.error('[/api/sigma/agents/run]', error.message);
