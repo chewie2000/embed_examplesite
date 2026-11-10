@@ -14,6 +14,7 @@ export default function SigmaEmbed({
   mode = '', urlId, label, onJwt, initialEmbedUrl, initialJwt, sessionLength, refreshKey = 0,
   showModeToggle = false, initialBookmarkId = null, autoExplore = false, onBookmarkChange, onBookmarkDeleted,
   teamSlug, subAddressSlug, menuVisible, menuPosition, assistantVisible, org,
+  onEvent, bridgeRef,
 }) {
   // Distinct key for ad hoc content-browser embeds (discovered urlId) vs the
   // pre-configured {mode}_SIGMA_BASE_URL examples — used for onJwt/inspector keying.
@@ -57,6 +58,16 @@ export default function SigmaEmbed({
     if (!targetOrigin) return;
     iframeRef.current?.contentWindow?.postMessage(payload, targetOrigin);
   };
+
+  // Opt-in hooks for pages that do their own two-way event handling (see
+  // InboundOutboundView): `onEvent` receives every message that passed the
+  // origin/source checks below, and `bridgeRef` exposes postToIframe so the
+  // page can send inbound events without reloading the iframe.
+  const onEventRef = useRef(onEvent);
+  onEventRef.current = onEvent;
+  useEffect(() => {
+    if (bridgeRef) bridgeRef.current = { post: postToIframe, isLoaded: iframeLoaded };
+  });
 
   // Sends the Sigma Embed SDK's inbound `workbook:mode:update` postMessage event
   // to switch the iframe's interaction mode. No-ops silently on Sigma's side if
@@ -168,6 +179,7 @@ export default function SigmaEmbed({
       if (!iframeRef.current || event.source !== iframeRef.current.contentWindow) return;
       const data = event.data;
       if (!data || typeof data !== 'object') return;
+      onEventRef.current?.(data);
       if (typeof data.type === 'string' && data.type.startsWith('workbook:')) {
         console.log('[SigmaEmbed] outbound event:', data);
       }
