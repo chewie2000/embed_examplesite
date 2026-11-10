@@ -29,7 +29,9 @@ export default async function InboundOutboundPage({ searchParams }) {
       email: sigmaEmail,
       accountType: meta.accountType,
       teams: meta.teams ?? [],
-      userAttributes: meta.userAttributes ?? {},
+      // No user attributes: embed_region/embed_button only exist in the legacy
+      // org, and this org rejects the JWT for attributes it doesn't define.
+      userAttributes: {},
       mode: 'inbound_outbound',
       urlParams: initialCustomer ? { 'customer-id': initialCustomer } : {},
     });

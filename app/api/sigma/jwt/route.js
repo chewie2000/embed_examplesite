@@ -22,6 +22,7 @@ export const revalidate = 0;
  *   accountType    — Sigma account type: 'viewer' | 'creator' | 'admin'
  *   teams          — array of Sigma team names e.g. ["sales", "emea"]
  *   userAttributes — object passed to Sigma for RLS e.g. { "region": "EMEA" }
+ *                    (sent for org=legacy only — other orgs reject undefined attributes)
  */
 export async function GET(request) {
   const { userId } = await auth();
@@ -56,10 +57,11 @@ export async function GET(request) {
   const teams = subAddress
     ? []
     : (swapTeam ? [swapTeam.name] : (meta.teams ?? []));
-  // These workbooks don't use attribute-driven RLS; kept in step with the
-  // server-rendered JWT so a client refetch can't drop the claims it first
-  // loaded with.
-  const userAttributes = (subAddress || swapTeam) ? {} : (meta.userAttributes ?? {});
+  // Only the legacy org defines these attributes (embed_region, embed_button);
+  // any other org rejects the JWT outright for attributes it doesn't know. Kept
+  // in step with the server-rendered JWT so a client refetch can't drop the
+  // claims it first loaded with.
+  const userAttributes = (org === 'legacy' && !subAddress && !swapTeam) ? (meta.userAttributes ?? {}) : {};
   const urlId = searchParams.get('urlId') || undefined;
   const wantBookmark = searchParams.get('wantBookmark') === '1';
   const sessionLengthParam = searchParams.get('sessionLength');
