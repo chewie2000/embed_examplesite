@@ -116,6 +116,10 @@ Pages register their active embed's JWT and page title with the shared chrome vi
 | `components/ContentTree.js` | Renders the read-only folder/workbook tree from `/api/sigma/tree` |
 | `components/SigmaEmbed.js` | Fetches JWT and renders `<iframe>` |
 | `components/ConceptDemoPage.js` | Shared template (badge, title, description, docs links, content slot) every use-case page renders through |
+| `app/dashboard/export-manager/page.js` + `components/ExportManager.js` | Export Manager use case — headless UI: schedule/pause/delete scheduled email exports and download one-off exports (epic `embed_examplesite-c63`) |
+| `lib/sigma-exports.js` | Export Manager's Sigma REST calls (export, schedules CRUD, workbook-access check). Service token + `exportAs: memberId`; never an impersonated token |
+| `lib/export-schedules.js` | Per-user schedule record in Clerk `privateMetadata.exportSchedules` + validation/guardrails (recipient domains, caps, cron builder) |
+| `app/api/sigma/export-schedules/**`, `app/api/sigma/export/**` | Export Manager routes — identity always from the Clerk session; schedules reachable only via the caller's own record |
 
 **Deploy:** Vercel auto-deploys on every push to `master`. Every push is production.
 
