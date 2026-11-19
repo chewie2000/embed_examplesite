@@ -205,6 +205,18 @@ function CreateSchedule({ workbook, count, onCreated }) {
 
 // ── Manage ──────────────────────────────────────────────────────────────────
 
+const STATUS_STYLE = {
+  active: { label: 'Active', cls: 'border-mint-border/40 bg-mint-400/10 text-mint-ink' },
+  paused: { label: 'Paused', cls: 'border-amber-300 bg-amber-50 text-amber-700' },
+  suspended: { label: 'Suspended', cls: 'border-red-300 bg-red-50 text-red-700' },
+  removed: { label: 'Removed in Sigma', cls: 'border-red-300 bg-red-50 text-red-700' },
+};
+
+// Sigma's live state when we have it, otherwise our own stored paused flag.
+const liveStatus = (s) => s.sigma?.status ?? (s.paused ? 'paused' : 'active');
+
+const formatWhen = (iso) => new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+
 function ManageSchedules({ state, onChanged }) {
   const [busyId, setBusyId] = useState(null);
   const [error, setError] = useState(null);
@@ -218,7 +230,7 @@ function ManageSchedules({ state, onChanged }) {
   const togglePause = (s) => act(s.id, () => api(`/api/sigma/export-schedules/${s.id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ paused: !s.paused }),
+    body: JSON.stringify({ paused: liveStatus(s) === 'active' }),
   }));
   const remove = (s) => act(s.id, () => api(`/api/sigma/export-schedules/${s.id}`, { method: 'DELETE' }));
 
@@ -239,15 +251,27 @@ function ManageSchedules({ state, onChanged }) {
                 <p className="text-sm font-medium text-ink-primary truncate">{s.name}</p>
                 <p className="text-xs text-ink-secondary truncate">{s.workbookName} · {s.format.toUpperCase()}</p>
               </div>
-              <span className={'shrink-0 text-[11px] rounded-full border px-2 py-0.5 ' + (s.paused ? 'border-amber-300 bg-amber-50 text-amber-700' : 'border-mint-border/40 bg-mint-400/10 text-mint-ink')}>
-                {s.paused ? 'Paused' : 'Active'}
+              <span className={'shrink-0 text-[11px] rounded-full border px-2 py-0.5 ' + STATUS_STYLE[liveStatus(s)].cls}>
+                {STATUS_STYLE[liveStatus(s)].label}
               </span>
             </div>
             <p className="text-xs text-ink-secondary">{describeTiming(s)}</p>
+            {s.sigma?.status === 'suspended' && (
+              <p className="text-xs text-red-700">Sigma suspended this schedule after repeated failed runs. Resume it to try again.</p>
+            )}
+            {s.sigma?.status === 'removed' && (
+              <p className="text-xs text-red-700">This schedule no longer exists in Sigma (deleted there). Delete it here to clear it.</p>
+            )}
+            {s.sigma?.status === 'paused' && s.sigma.disabledAt && (
+              <p className="text-xs text-ink-secondary">Paused in Sigma {formatWhen(s.sigma.disabledAt)}</p>
+            )}
+            {s.sigma?.schedulerActivityAt && (
+              <p className="text-xs text-ink-secondary">Last scheduler activity: {formatWhen(s.sigma.schedulerActivityAt)}</p>
+            )}
             <p className="text-xs text-ink-secondary break-words">To: {s.recipients.join(', ')}</p>
             <div className="flex gap-2 pt-1">
               <button type="button" disabled={busyId === s.id} onClick={() => togglePause(s)} className={SMALL_BTN}>
-                {s.paused ? 'Resume' : 'Pause'}
+                {liveStatus(s) === 'active' ? 'Pause' : 'Resume'}
               </button>
               <button type="button" disabled={busyId === s.id} onClick={() => remove(s)} className={SMALL_BTN + ' text-red-700'}>
                 Delete

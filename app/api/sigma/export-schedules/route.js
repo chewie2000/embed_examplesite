@@ -6,7 +6,7 @@ import {
   buildTiming, getSchedulesMap, listSchedules, setScheduleEntry,
   validateFormat, validateName, validateRecipients,
 } from '@/lib/export-schedules';
-import { assertWorkbookAccess, createWorkbookSchedule, deleteWorkbookSchedule } from '@/lib/sigma-exports';
+import { assertWorkbookAccess, createWorkbookSchedule, deleteWorkbookSchedule, getWorkbookScheduleStates } from '@/lib/sigma-exports';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -21,7 +21,21 @@ const NO_STORE = { 'Cache-Control': 'no-store' };
 export async function GET() {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  return NextResponse.json({ schedules: listSchedules(user) }, { headers: NO_STORE });
+  const schedules = listSchedules(user);
+
+  // Overlay Sigma's live state (active / paused / suspended / removed). Only the
+  // caller's own schedule ids are looked up. A Sigma failure must not break the
+  // list, so those cards just fall back to our stored state (sigma: null).
+  const workbookIds = [...new Set(schedules.map((s) => s.workbookId))];
+  const results = await Promise.allSettled(workbookIds.map((id) => getWorkbookScheduleStates(id)));
+  const byWorkbook = new Map(workbookIds.map((id, i) => [id, results[i].status === 'fulfilled' ? results[i].value : null]));
+  const withState = schedules.map((s) => {
+    const states = byWorkbook.get(s.workbookId);
+    if (!states) return { ...s, sigma: null };
+    return { ...s, sigma: states.get(s.id) ?? { status: 'removed', disabledAt: null, schedulerActivityAt: null } };
+  });
+
+  return NextResponse.json({ schedules: withState }, { headers: NO_STORE });
 }
 
 /**
